@@ -341,7 +341,7 @@
             </div>
             <div style="padding: 10px; display: flex; gap: 5px;">
                 <button id="btn-camera" onclick="toggleCamera()" style="flex: 1; background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px; font-family: monospace;">[ ACTIVATE SENSOR ]</button>
-                <button id="btn-capture" onclick="captureSubject()" style="display: none; flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px; font-family: monospace;">[ CAPTURE ]</button>
+                <button id="btn-capture" onclick="captureSubject()" style="flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px; font-family: monospace;">[ CAPTURE ]</button>
             </div>
         </div>
     </div>
@@ -493,8 +493,6 @@
     <div id="virus" class="overlay" style="background:black; display:none;"><div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;"><h1 class="flicker" style="color: #00ff00; font-size: 4rem;">SYSTEM PURGE</h1><div id="virus-console" style="text-align: left; font-family: monospace; color: #00ff00; font-size: 1.2rem;"></div></div></div>
     <div id="memory-dump-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; padding:40px; box-sizing:border-box;"><button onclick="document.getElementById('memory-dump-overlay').style.display='none'" style="position:absolute; top:20px; right:20px; background:transparent; color:white; border:1px solid white; cursor:pointer;">[ CLOSE FILE ]</button><div id="dump-content-overlay" style="color:#ff00ff; font-family:monospace; margin-top:40px; white-space: pre-wrap; font-size: 14px;"></div></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
-
     <script>
         // --- HIVE MIND CONFIGURATION ---
         const SUPABASE_URL = 'https://fkpxihftilgwuktsunjv.supabase.co';
@@ -502,21 +500,9 @@
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
 
-        // --- FFmpeg CONFIGURATION ---
-        // CRITICAL FIX: These must be declared *after* the script tag has loaded,
-        // which now happens right above this block.
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: false }); // Set log to false for cleaner console
-        let isFFmpegLoaded = false;
-
-        async function loadFFmpeg() {
-            if (!ffmpeg.isLoaded()) {
-                document.getElementById('face-status').innerText = "LOADING CORE...";
-                await ffmpeg.load();
-                isFFmpegLoaded = true;
-                document.getElementById('face-status').innerText = "CORE ONLINE";
-            }
-        }
+        // --- FFmpeg CONFIGURATION (CLEANED UP) ---
+        // Global FFmpeg objects REMOVED.
+        let isFFmpegLoaded = false; // Kept as placeholder, but unused now.
         
         // --- AUDIO ENGINE ---
         let audioCtx;
@@ -848,7 +834,7 @@
             ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
         }
         function makeDistortionCurve(amount) { const k = typeof amount === 'number' ? amount : 50; const n_samples = 44100; const curve = new Float32Array(n_samples); const deg = Math.PI / 180; for (let i = 0; i < n_samples; ++i ) { const x = i * 2 / n_samples - 1; curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) ); } return curve; }
-        function impulseResponse(duration, decay, reverse) { const sampleRate = audioCtx.sampleRate; const length = sampleRate * duration; const impulse = audioCtx.createBuffer(2, length, sampleRate); const left = impulse.getChannelData(0); const right = impulse.getChannelData(1); for (let i = 0; i < length; i++){ const n = reverse ? length - i : i; left[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); right[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); } return impulse; }
+        function impulseResponse(duration, decay, reverse) { const sampleRate = audioCtx.sampleRate; const length = sampleCtx.sampleRate * duration; const impulse = audioCtx.createBuffer(2, length, sampleRate); const left = impulse.getChannelData(0); const right = impulse.getChannelData(1); for (let i = 0; i < length; i++){ const n = reverse ? length - i : i; left[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); right[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); } return impulse; }
 
         // --- ORACLE ---
         let pendingCard3 = null;
@@ -1101,13 +1087,18 @@
             if (e.key === 'Enter') postScream();
         });
 
-        // --- OCULAR SYSTEM (WEBCAM) ---
+        // --- OCULAR SYSTEM (WEBCAM) - CANVAS CAPTURE ONLY ---
         let videoStream = null;
         let paintInterval = null;
         let noiseCanvas = null;
         let noiseCtx = null;
         let noiseLoop = null; 
-
+        
+        // FFmpeg objects REMOVED and REPLACED with dummy objects to prevent crashes.
+        const createFFmpeg = () => ({}); 
+        const fetchFile = () => {}; 
+        const ffmpeg = {};
+        
         async function toggleCamera() {
             const video = document.getElementById('webcam-feed');
             const btn = document.getElementById('btn-camera');
@@ -1129,7 +1120,7 @@
                 btn.innerText = "[ ACTIVATE SENSOR ]";
                 btn.style.background = "var(--main-color)";
                 btn.style.color = "black";
-                if(capBtn) capBtn.style.display = "none";
+                if(capBtn) capBtn.style.display = "block"; // Always visible in pre-FFmpeg state
                 status.innerText = "NO SIGNAL";
             } else {
                 // START UP
@@ -1217,62 +1208,35 @@
             }
         }
 
-        async function captureSubject() {
-            if (!isFFmpegLoaded) {
-                await loadFFmpeg();
-                if (!isFFmpegLoaded) {
-                    alert("FFmpeg core failed to load. Try refreshing.");
-                    return;
-                }
-            }
-
-            const status = document.getElementById('face-status');
-            status.innerText = "CAPTURING...";
+        function captureSubject() {
+            // Reverted to simple JS Canvas Capture (pre-FFmpeg state)
 
             const mirrorCanvas = document.getElementById('mirror-canvas');
-            // CRITICAL: We need a large, sharp PNG to feed FFmpeg
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = 480;
-            tempCanvas.height = 360;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.imageSmoothingEnabled = false; // Force sharp pixels on capture canvas
-            tempCtx.drawImage(mirrorCanvas, 0, 0, 480, 360);
+            const noiseCanvas = document.getElementById('noise-canvas');
+
+            // 1. Create a temporary, final-resolution canvas (480x360)
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = 480;
+            finalCanvas.height = 360;
+            const finalCtx = finalCanvas.getContext('2d');
             
-            const baseDataURL = tempCanvas.toDataURL('image/png');
+            // Force sharp pixel upscale
+            finalCtx.imageSmoothingEnabled = false; 
+
+            // 2. Draw the pixel-crunch feed (Upscaled from 128x96 to 480x360)
+            finalCtx.drawImage(mirrorCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
             
-            status.innerText = "PROCESSING SIGNAL...";
-            const rawInput = await fetchFile(baseDataURL);
-
-            await ffmpeg.FS('writeFile', 'input.png', rawInput);
-
-            try {
-                await ffmpeg.run(
-                    '-i', 'input.png', 
-                    '-pix_fmt', 'yuv420p',
-                    '-vf', 'noise=alls=10:allf=t+z,pad=500:380:10:10:black', 
-                    '-c:v', 'libx264',
-                    '-preset', 'ultrafast',
-                    '-t', '1', 
-                    'output.mp4'
-                );
-            } catch (e) {
-                console.error("FFMPEG EXECUTION FAILED:", e);
-                status.innerText = "PROCESSING ERROR";
-                return;
-            }
-
-            status.innerText = "DOWNLOAD READY";
-            const processedData = ffmpeg.FS('readFile', 'output.mp4');
-
-            const videoBlob = new Blob([processedData.buffer], { type: 'video/mp4' });
+            // 3. Draw the current noise/grain layer over the top
+            finalCtx.drawImage(noiseCanvas, 0, 0); 
+            
+            // 4. Save the composite image as PNG
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(videoBlob);
-            link.download = 'EVIDENCE_' + Date.now() + '.mp4';
+            link.download = 'EVIDENCE_' + Date.now() + '.png';
+            link.href = finalCanvas.toDataURL('image/png');
             link.click();
 
             playSound('crunch');
-            status.innerText = "PROCESSING COMPLETE";
-            setTimeout(() => status.innerText = "CORE ONLINE", 3000); 
+            finalCanvas.remove(); 
         }
 
         function closeOcular() {
@@ -1283,7 +1247,7 @@
         function openOcular() {
             closeAll();
             document.getElementById('ocular-window').style.display = 'flex';
-            loadFFmpeg(); 
+            // loadFFmpeg() removed, as it is no longer used/needed.
         }
     </script>
 </body>
