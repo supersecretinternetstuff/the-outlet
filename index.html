@@ -586,6 +586,21 @@
         let masterGain = null; let distortionNode = null; let reverbNode = null;
         let pEntropy = 20; let pPressure = 0; let pHollow = 50;
 
+        // Immediate Feedback Listeners (Fixes "Broken" Feel)
+        ['entropy', 'pressure', 'hollow'].forEach(id => {
+            const el = document.getElementById('param-' + id);
+            const val = document.getElementById('val-' + id);
+            if(el && val) {
+                el.addEventListener('input', (e) => {
+                    val.innerText = e.target.value + "%";
+                    // Update variables immediately
+                    if(id === 'entropy') pEntropy = parseInt(e.target.value);
+                    if(id === 'pressure') pPressure = parseInt(e.target.value);
+                    if(id === 'hollow') pHollow = parseInt(e.target.value);
+                });
+            }
+        });
+
         function initSynth() {
             if(!audioCtx) initAudio(); if(audioCtx.state === 'suspended') audioCtx.resume();
             masterGain = audioCtx.createGain(); masterGain.gain.value = 0.5;
@@ -791,6 +806,7 @@
     </script>
 </body>
 </html>
+
 
 
 
