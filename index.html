@@ -302,6 +302,7 @@
             <div style="cursor:pointer; margin-bottom:5px;" onclick="openOverlay('manifesto')">📄 TRUTH.txt</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="toggleArchiveWindow()">📚 ARCHIVE.log</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="openOverlay('chat')">💬 LOGS.irc</div>
+            <div style="cursor:pointer; margin-bottom:5px;" onclick="openOcular()">👁️ OCULAR.sys</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="runVirus()">⚠️ PURGE.bat</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="openOverlay('broadcast')">📡 SCREAM.msg</div>
             <div style="cursor:pointer; margin-bottom:5px; color: #333;" onclick="window.location.href='void.html'">⚙️ system32.dll</div>
@@ -410,6 +411,33 @@
         </div>
     </div>
 
+<div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 320px; height: auto;">
+        <div class="title-bar" ondblclick="toggleMinimize(this)">
+            <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> OCULAR.exe</span>
+            <div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="closeOcular()">X</button></div>
+        </div>
+        <div class="window-content" style="padding: 0; background: #000; display: flex; flex-direction: column;">
+            
+            <div style="position: relative; width: 100%; height: 240px; overflow: hidden; border-bottom: 1px solid var(--main-color);">
+                <video id="webcam-feed" autoplay playsinline style="display: none;"></video>
+                <canvas id="mirror-canvas" width="128" height="96" style="width: 100%; height: 100%; image-rendering: pixelated; opacity: 0.8;"></canvas>
+                
+                <div class="scan-line"></div>
+                <div style="position: absolute; top: 5px; left: 5px; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px;">REC <span class="flicker" style="color:red">●</span></div>
+                <div id="face-status" style="position: absolute; bottom: 5px; right: 5px; font-size: 10px; text-align: right; text-shadow: 1px 1px 0 #000;">NO SIGNAL</div>
+                
+                <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 1px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; width: 1px; height: 20px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
+            </div>
+
+            <div style="padding: 10px; display: flex; gap: 5px;">
+                <button id="btn-camera" onclick="toggleCamera()" style="flex: 1; background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px;">[ ACTIVATE SENSOR ]</button>
+                <button id="btn-capture" onclick="captureSubject()" style="display: none; flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px;">[ CAPTURE ]</button>
+            </div>
+        </div>
+    </div>
+
+                    
     <div class="window" style="top: 400px; left: 50px; width: 450px; height: 32px;">
         <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> SYNTHESIS_ENGINE_V2.exe</span><div class="controls"><button onclick="minimize(this)">_</button><button>X</button></div></div>
         <div class="window-content" style="text-align: center; display: none;">
@@ -1146,9 +1174,104 @@
         document.getElementById('scream-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') postScream();
         });
+
+        // --- OCULAR SYSTEM (WEBCAM) ---
+        let videoStream = null;
+        let paintInterval = null;
+
+        async function toggleCamera() {
+            const video = document.getElementById('webcam-feed');
+            const btn = document.getElementById('btn-camera');
+            const capBtn = document.getElementById('btn-capture');
+            const status = document.getElementById('face-status');
+
+            if (videoStream) {
+                // SHUT DOWN
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+                clearInterval(paintInterval);
+                
+                // Reset UI
+                const ctx = document.getElementById('mirror-canvas').getContext('2d');
+                ctx.clearRect(0, 0, 128, 96); // Clear canvas
+                btn.innerText = "[ ACTIVATE SENSOR ]";
+                btn.style.background = "var(--main-color)";
+                btn.style.color = "black";
+                capBtn.style.display = "none";
+                status.innerText = "NO SIGNAL";
+            } else {
+                // START UP
+                try {
+                    status.innerText = "INITIALIZING...";
+                    videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    video.srcObject = videoStream;
+                    
+                    btn.innerText = "[ TERMINATE LINK ]";
+                    btn.style.background = "var(--alert-color)";
+                    btn.style.color = "black";
+                    capBtn.style.display = "block";
+                    status.innerText = "DETECTING BIOMETRICS...";
+
+                    // Start the render loop
+                    paintInterval = setInterval(paintFrame, 100); // 10 FPS for gritty feel
+                } catch (err) {
+                    console.error("CAMERA ERROR:", err);
+                    alert("SENSOR ACCESS DENIED. MACHINE BLIND.");
+                    status.innerText = "ACCESS DENIED";
+                }
+            }
+        }
+
+        function paintFrame() {
+            const video = document.getElementById('webcam-feed');
+            const canvas = document.getElementById('mirror-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Draw video to small canvas (creates pixelation)
+            // We tint it green using composite operations
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                // 1. Draw raw frame
+                ctx.drawImage(video, 0, 0, 128, 96);
+                
+                // 2. Apply Green Night Vision Tint
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.fillStyle = '#00ff00';
+                ctx.fillRect(0, 0, 128, 96);
+                
+                // 3. Reset for next frame
+                ctx.globalCompositeOperation = 'source-over';
+                
+                // Randomly flicker text
+                if(Math.random() > 0.9) {
+                     document.getElementById('face-status').innerText = "SUBJECT: " + Math.floor(Math.random()*9999);
+                }
+            }
+        }
+
+        function captureSubject() {
+            const canvas = document.getElementById('mirror-canvas');
+            // Create a temporary link to download
+            const link = document.createElement('a');
+            link.download = 'SUBJECT_ANALYSIS_' + Date.now() + '.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            playSound('crunch');
+        }
+
+        function closeOcular() {
+            if(videoStream) toggleCamera(); // Turn off cam if running
+            document.getElementById('ocular-window').style.display = 'none';
+        }
+
+        // Add to the File Explorer list (Optional: You can add this manually to the HTML list)
+        function openOcular() {
+            closeAll(); // Optional: close overlays
+            document.getElementById('ocular-window').style.display = 'flex';
+        }
     </script>
 </body>
 </html>
+
 
 
 
