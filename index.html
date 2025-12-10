@@ -374,13 +374,24 @@
         </div>
     </div>
 
-    <div class="window" style="top: 350px; left: 100px; width: 380px; height: 32px;">
-        <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> NEURAL_SEQUENCER.exe</span><div class="controls"><button onclick="toggleMinimize(this)">_</button><button>X</button></div></div>
+<div class="window" style="top: 350px; left: 100px; width: 480px; height: 32px;">
+        <div class="title-bar" ondblclick="toggleMinimize(this)">
+            <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> NEURAL_SEQUENCER.exe</span>
+            <div class="controls"><button onclick="toggleMinimize(this)">_</button><button>X</button></div>
+        </div>
         <div class="window-content" style="text-align: center; display: none;">
-            <div id="sequencer-grid" style="display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px;"></div>
+            <div id="sequencer-grid" style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; width: 100%;"></div>
+            
             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--main-color); padding-top: 10px;">
-                <div style="font-size: 10px;">BPM: <input id="bpm-slider" type="range" min="60" max="200" value="120" style="width: 60px; accent-color: var(--main-color);"> <span id="bpm-val">120</span></div>
-                <div><button onclick="toggleSequencer()" id="btn-play" style="background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px 10px;">[ PLAY ]</button><button onclick="randomizePattern()" style="background: black; color: var(--main-color); border: 1px solid var(--main-color); cursor: pointer; padding: 5px 10px;">[ HALLUCINATE ]</button></div>
+                <div style="font-size: 10px; display: flex; align-items: center; gap: 5px;">
+                    BPM: <input id="bpm-slider" type="range" min="60" max="200" value="120" style="width: 60px; accent-color: var(--main-color); height: 5px;"> 
+                    <span id="bpm-val">120</span>
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="toggleSequencer()" id="btn-play" style="background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px 10px; font-family: monospace;">[ PLAY ]</button>
+                    <button onclick="randomizePattern()" style="background: black; color: var(--main-color); border: 1px solid var(--main-color); cursor: pointer; padding: 5px 10px; font-family: monospace;">[ RND ]</button>
+                    <button onclick="clearPattern()" style="background: black; color: var(--alert-color); border: 1px solid var(--alert-color); cursor: pointer; padding: 5px 10px; font-family: monospace;">[ CLR ]</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1124,6 +1135,7 @@
     </script>
 </body>
 </html>
+
 
 
 
