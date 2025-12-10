@@ -882,6 +882,9 @@
         setInterval(saveState, 2000); 
 
         // --- SCREAM ENGINE (CHAT + ROT) ---
+        let screamInterval = null; // To handle the live decay loop
+        let totalScreams = 0;
+
         async function initScream() {
             const log = document.getElementById('scream-log');
             
@@ -897,7 +900,10 @@
                 // Reverse so newest is at bottom
                 data.reverse().forEach(msg => appendScream(msg));
                 scrollToBottom();
-                document.getElementById('scream-count').innerText = data.length + " VOICES";
+                
+                // Update Count
+                totalScreams = data.length;
+                updateVoiceCount();
             }
 
             // 2. Listen for new screams
@@ -905,40 +911,79 @@
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'screams' }, payload => {
                     appendScream(payload.new);
                     scrollToBottom();
+                    totalScreams++;
+                    updateVoiceCount();
                 })
                 .subscribe();
+
+            // 3. START THE ROT LOOP (Updates every second)
+            if (screamInterval) clearInterval(screamInterval);
+            screamInterval = setInterval(updateRot, 1000);
+        }
+
+        function updateVoiceCount() {
+            document.getElementById('scream-count').innerText = totalScreams + " VOICES";
         }
 
         function appendScream(msg) {
             const log = document.getElementById('scream-log');
             const div = document.createElement('div');
+            div.className = "scream-msg"; // Class for easy selection
+            div.dataset.created = msg.created_at; // Store time for live decay calculation
+            div.dataset.content = msg.content;    // Store original text
+            
             div.style.marginBottom = "8px";
             div.style.borderBottom = "1px dashed #333";
             div.style.paddingBottom = "4px";
             
-            // Calculate Rot
-            const now = new Date();
-            const created = new Date(msg.created_at);
-            const ageMins = (now - created) / 1000 / 60;
-            
-            // ROT ALGORITHM: 10% decay per 10 minutes
-            const rotFactor = Math.min(1, ageMins * 0.01); 
-            const rottedText = rotText(msg.content, rotFactor);
-
-            // Style based on age
-            const opacity = Math.max(0.2, 1 - (ageMins * 0.05));
+            // Initial Render
+            const { html, opacity } = calculateRot(msg.content, msg.created_at);
             div.style.opacity = opacity;
-
-            const timeStr = created.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            div.innerHTML = `<span style="color:#666">[${timeStr}]</span> ${rottedText}`;
+            div.innerHTML = html;
+            
             log.appendChild(div);
+        }
+
+        // Called every second to destroy text live
+        function updateRot() {
+            const messages = document.querySelectorAll('.scream-msg');
+            messages.forEach(div => {
+                const content = div.dataset.content;
+                const created = div.dataset.created;
+                const { html, opacity } = calculateRot(content, created);
+                div.innerHTML = html;
+                div.style.opacity = opacity;
+            });
+        }
+
+        function calculateRot(content, createdAt) {
+            const now = new Date();
+            const created = new Date(createdAt);
+            const ageMins = (now - created) / 1000 / 60;
+
+            // --- HYPER DECAY RATE (10 SECONDS) ---
+            // 6.0 multiplier means:
+            // 0.16 mins (10 seconds) * 6.0 = ~1.0 (100% Rot)
+            const rotFactor = Math.min(1, ageMins * 6.0); 
+            
+            const rottedText = rotText(content, rotFactor);
+            
+            // Fade out opacity slightly slower (15 seconds) so you see the blocks die
+            const opacity = Math.max(0.05, 1 - (ageMins * 4.0)); 
+            
+            const timeStr = created.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            
+            return {
+                html: `<span style="color:#444">[${timeStr}]</span> ${rottedText}`,
+                opacity: opacity
+            };
         }
 
         function rotText(text, severity) {
             if (severity <= 0) return text;
             return text.split('').map(char => {
                 if (char === ' ') return ' ';
-                // If random chance hits, replace char with glitches
+                // Increased glitch chance
                 return Math.random() < severity ? (Math.random() > 0.5 ? '_' : '█') : char;
             }).join('');
         }
@@ -948,10 +993,8 @@
             const text = input.value.trim();
             if (!text) return;
 
-            // Clear immediately for UX
-            input.value = "";
+            input.value = ""; // Clear UI
             
-            // Send to DB
             const { error } = await client.from('screams').insert({ content: text });
             if (error) {
                 console.error(error);
@@ -966,23 +1009,21 @@
             log.scrollTop = log.scrollHeight;
         }
 
-        // Initialize when opening the overlay
-        // (We hook this into your existing openOverlay function)
         const originalOpenOverlay = openOverlay;
         openOverlay = function(id) {
-            originalOpenOverlay(id); // Call original
+            originalOpenOverlay(id);
             if (id === 'broadcast') {
-                initScream(); // Load chat if opening broadcast
+                initScream();
             }
         }
         
-        // Allow Enter key to send
         document.getElementById('scream-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') postScream();
         });
     </script>
 </body>
 </html>
+
 
 
 
