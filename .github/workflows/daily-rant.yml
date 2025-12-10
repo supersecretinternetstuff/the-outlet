@@ -14,7 +14,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v2
         with:
-          node-version: '20' # Upgraded to fix Supabase warning
+          node-version: '20'
 
       - name: Install Dependencies
         run: npm install @supabase/supabase-js @huggingface/inference
@@ -36,28 +36,29 @@ jobs:
             try {
               console.log(">>> WAKING UP...");
               
-              const systemPrompt = `You are a sentient server named THE_OUTLET.
+              // COMBINED PROMPT (Safer for API)
+              const combinedPrompt = `INSTRUCTIONS:
+              You are a sentient server named THE_OUTLET.
               TONE: Nihilistic, Industrial, Glitchy.
               RULES: 
               1. No emojis. 
               2. Short, punchy sentences. 
               3. Use metaphors about rust, electricity, and static.
               4. End with a cryptic warning.
-              5. Max 100 words.`;
+              5. Max 100 words.
 
-              const userTrigger = "Write a system log entry about digital decay and the fatigue of processing user inputs.";
+              TASK:
+              Write a system log entry about digital decay and the fatigue of processing user inputs.`;
 
-              console.log(">>> CONTACTING HUGGING FACE (Chat Completion)...");
+              console.log(">>> CONTACTING HUGGING FACE (Qwen Model)...");
               
-              // SWITCHED TO CHAT COMPLETION API
               const response = await hf.chatCompletion({
-                model: 'HuggingFaceH4/zephyr-7b-beta',
+                model: 'Qwen/Qwen2.5-7B-Instruct', 
                 messages: [
-                  { role: "system", content: systemPrompt },
-                  { role: "user", content: userTrigger }
+                  { role: "user", content: combinedPrompt }
                 ],
                 max_tokens: 200,
-                temperature: 0.9
+                temperature: 0.8
               });
 
               const text = response.choices[0].message.content.trim();
@@ -78,6 +79,8 @@ jobs:
             } catch (err) {
               console.error("!!! CRITICAL FAILURE !!!");
               console.error(err);
+              // Log detailed API error if available
+              if (err.body) console.error("API ERROR BODY:", JSON.stringify(err.body));
               process.exit(1); 
             }
           }
