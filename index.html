@@ -493,60 +493,37 @@
     <div id="virus" class="overlay" style="background:black; display:none;"><div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;"><h1 class="flicker" style="color: #00ff00; font-size: 4rem;">SYSTEM PURGE</h1><div id="virus-console" style="text-align: left; font-family: monospace; color: #00ff00; font-size: 1.2rem;"></div></div></div>
     <div id="memory-dump-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; padding:40px; box-sizing:border-box;"><button onclick="document.getElementById('memory-dump-overlay').style.display='none'" style="position:absolute; top:20px; right:20px; background:transparent; color:white; border:1px solid white; cursor:pointer;">[ CLOSE FILE ]</button><div id="dump-content-overlay" style="color:#ff00ff; font-family:monospace; margin-top:40px; white-space: pre-wrap; font-size: 14px;"></div></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/ffmpeg.min.js"></script>
+    
     <script>
         // --- HIVE MIND CONFIGURATION ---
         const SUPABASE_URL = 'https://fkpxihftilgwuktsunjv.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHhpaGZ0aWxnd3VrdHN1bmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMzU3ODQsImV4cCI6MjA4MDkxMTc4NH0.61WQz6gC1IURkueQuhuZJclZr5enva4NlWMhYFq3ntc';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
-// --- FFmpeg CONFIGURATION ---
+
+        // --- FFmpeg CONFIGURATION (Global objects are now available here) ---
         const { createFFmpeg, fetchFile } = FFmpeg;
         
-        // CRITICAL FIX: Tell FFmpeg where to find its core files on the CDN (v0.12.7)
+        // FINAL FIX: We set the corePath to the CDN version that matches the library (0.12.15)
         const ffmpeg = createFFmpeg({ 
             log: false,
-            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js", 
+            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.15/dist/ffmpeg-core.js", 
         }); 
         let isFFmpegLoaded = false;
-       function loadFFmpegScript() {
-            if (isFFmpegScriptLoaded) return;
-            isFFmpegScriptLoaded = true;
-            
-            const script = document.createElement('script');
-            // Using a current version (0.12.15 is the top available version for the package)
-            script.src = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/ffmpeg.min.js";
-            document.body.appendChild(script);
-
-            script.onload = () => {
-                // Initialize global FFmpeg objects once script is loaded
-                if (window.FFmpeg) {
-                    createFFmpeg = window.FFmpeg.createFFmpeg;
-                    fetchFile = window.FFmpeg.fetchFile;
-                    
-                    // NOTE: Removed corePath setting. The library should now automatically 
-                    // look for the correct core files based on its own version (0.12.15).
-                    ffmpeg = createFFmpeg({ log: false }); 
-                }
-            };
-        }
-
+        
         async function loadFFmpeg() {
-            if (!isFFmpegScriptLoaded) {
-                 // Should be loaded by openOcular, but double-check safety
-                 loadFFmpegScript();
-                 // Wait a moment for the script to execute
-                 await new Promise(r => setTimeout(r, 500)); 
-            }
-            if (!ffmpeg || !createFFmpeg) {
-                 document.getElementById('face-status').innerText = "CORE INIT ERROR. Refresh.";
-                 return;
-            }
-
             if (!ffmpeg.isLoaded()) {
                 document.getElementById('face-status').innerText = "LOADING CORE...";
-                await ffmpeg.load();
-                isFFmpegLoaded = true;
-                document.getElementById('face-status').innerText = "CORE ONLINE";
+                try {
+                    await ffmpeg.load();
+                    isFFmpegLoaded = true;
+                    document.getElementById('face-status').innerText = "CORE ONLINE";
+                } catch (e) {
+                    console.error("FFmpeg Load Error:", e);
+                    document.getElementById('face-status').innerText = "CORE LOAD FAILED";
+                    alert("FFmpeg core failed to load. (Check browser console for details).");
+                }
             }
         }
         
@@ -1280,8 +1257,6 @@
             await ffmpeg.FS('writeFile', 'input.png', rawInput);
 
             // 3. Execute FFmpeg Command (The Secret Sauce)
-            // Filters: scale=480:360 (upscale), hqdn3d (noise reduction, optional), format=yuv420p (for mp4 encoding)
-            // Added: colorchannelmixer=1:0:0:0:0.5:1:0:0:0.5:0:1:0 (Subtle color aberration/shift)
             try {
                 await ffmpeg.run(
                     '-i', 'input.png', 
@@ -1328,5 +1303,3 @@
     </script>
 </body>
 </html>
-
-
