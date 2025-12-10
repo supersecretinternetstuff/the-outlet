@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>/// THE_OUTLET ///</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
+    
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22black%22/><text y=%22.9em%22 font-size=%2290%22>👁️</text></svg>">
     <style>
         /* ============================ */
@@ -206,7 +206,7 @@
         .tarot-card:hover { background: #111; border-style: solid; }
         .card-art { font-size: 10px; line-height: 10px; font-weight: bold; }
         
-       /* --- OCULAR FX --- */
+        /* --- OCULAR FX --- */
         .scan-line {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 5px;
@@ -215,10 +215,7 @@
             animation: scan 3s linear infinite;
             pointer-events: none;
         }
-        @keyframes scan { 
-            0% { top: -10%; } 
-            100% { top: 110%; } 
-        }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
 
         /* ============================ */
         /* /// MOBILE OVERRIDE (V3) /// */
@@ -326,29 +323,22 @@
         </div>
     </div>
 
- <div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 480px; height: auto; display: none;"> 
+    <div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 480px; height: auto; display: none;"> 
         <div class="title-bar" ondblclick="toggleMinimize(this)">
             <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> OCULAR.exe</span>
             <div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="closeOcular()">X</button></div>
         </div>
         <div class="window-content" style="padding: 0; background: #000; display: flex; flex-direction: column;">
-            
             <div style="position: relative; width: 100%; height: 360px; overflow: hidden; border-bottom: 1px solid var(--main-color);">
-                
                 <video id="webcam-feed" autoplay playsinline muted style="display: none; filter: contrast(250%) saturate(200%) brightness(0.8);"></video>
-                
                 <canvas id="mirror-canvas" width="128" height="96" style="width: 100%; height: 100%; image-rendering: pixelated; opacity: 0.9;"></canvas>
-                
                 <canvas id="noise-canvas" width="480" height="360" style="position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.15;"></canvas>
-
                 <div class="scan-line"></div>
                 <div style="position: absolute; top: 5px; left: 5px; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px;">REC <span class="flicker" style="color:red">●</span></div>
                 <div id="face-status" style="position: absolute; bottom: 5px; right: 5px; font-size: 10px; text-align: right; text-shadow: 1px 1px 0 #000;">NO SIGNAL</div>
-                
                 <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 1px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
                 <div style="position: absolute; top: 50%; left: 50%; width: 1px; height: 20px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
             </div>
-
             <div style="padding: 10px; display: flex; gap: 5px;">
                 <button id="btn-camera" onclick="toggleCamera()" style="flex: 1; background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px; font-family: monospace;">[ ACTIVATE SENSOR ]</button>
                 <button id="btn-capture" onclick="captureSubject()" style="display: none; flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px; font-family: monospace;">[ CAPTURE ]</button>
@@ -503,6 +493,8 @@
     <div id="virus" class="overlay" style="background:black; display:none;"><div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;"><h1 class="flicker" style="color: #00ff00; font-size: 4rem;">SYSTEM PURGE</h1><div id="virus-console" style="text-align: left; font-family: monospace; color: #00ff00; font-size: 1.2rem;"></div></div></div>
     <div id="memory-dump-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; padding:40px; box-sizing:border-box;"><button onclick="document.getElementById('memory-dump-overlay').style.display='none'" style="position:absolute; top:20px; right:20px; background:transparent; color:white; border:1px solid white; cursor:pointer;">[ CLOSE FILE ]</button><div id="dump-content-overlay" style="color:#ff00ff; font-family:monospace; margin-top:40px; white-space: pre-wrap; font-size: 14px;"></div></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
+
     <script>
         // --- HIVE MIND CONFIGURATION ---
         const SUPABASE_URL = 'https://fkpxihftilgwuktsunjv.supabase.co';
@@ -510,19 +502,21 @@
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
 
-// --- FFmpeg CONFIGURATION ---
-const { createFFmpeg, fetchFile } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: true });
-let isFFmpegLoaded = false;
+        // --- FFmpeg CONFIGURATION ---
+        // CRITICAL FIX: These must be declared *after* the script tag has loaded,
+        // which now happens right above this block.
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: false }); // Set log to false for cleaner console
+        let isFFmpegLoaded = false;
 
-async function loadFFmpeg() {
-    if (!ffmpeg.isLoaded()) {
-        document.getElementById('face-status').innerText = "LOADING CORE...";
-        await ffmpeg.load();
-        isFFmpegLoaded = true;
-        document.getElementById('face-status').innerText = "CORE ONLINE";
-    }
-}
+        async function loadFFmpeg() {
+            if (!ffmpeg.isLoaded()) {
+                document.getElementById('face-status').innerText = "LOADING CORE...";
+                await ffmpeg.load();
+                isFFmpegLoaded = true;
+                document.getElementById('face-status').innerText = "CORE ONLINE";
+            }
+        }
         
         // --- AUDIO ENGINE ---
         let audioCtx;
@@ -981,7 +975,8 @@ async function loadFFmpeg() {
             });
             ctx.restore(); ctx.fillStyle = "white"; ctx.textAlign="left"; ctx.fillText("CLARITY: " + score + "%", 10, 20); if(!isGameOver) gameLoopId = requestAnimationFrame(gameLoop);
         }
-// --- SYSTEM (INPUT FIX) ---
+
+        // --- SYSTEM ---
         document.getElementById('enter-overlay').addEventListener('click', function() { 
             this.style.display = 'none'; // CRITICAL: Hide the overlay immediately on click
 
@@ -990,6 +985,11 @@ async function loadFFmpeg() {
             document.getElementById('bg-audio').volume = 0.4; 
             document.getElementById('bg-audio').play().catch(e=>console.log("Audio play failed, continuing anyway."));
         });
+        
+        function openOverlay(id) { closeAll(); document.getElementById(id).style.display = 'block'; }
+        function closeAll() { document.querySelectorAll('.overlay').forEach(o=>o.style.display='none'); document.body.style.filter = "none"; document.body.classList.remove("shake-screen"); }
+        function runVirus() { openOverlay('virus'); const c = document.getElementById('virus-console'); const l = ["Deleting System32...", "Overwriting BIOS...", "Harvesting User Data...", "FATAL ERROR: SOUL NOT FOUND"]; let i = 0; c.innerHTML = ""; let int = setInterval(() => { if (i < l.length) { c.innerHTML += "> " + l[i] + "<br>"; i++; } else { clearInterval(int); document.body.classList.add("shake-screen"); let inv = false; let g = setInterval(() => { inv = !inv; document.body.style.filter = inv ? "invert(1)" : "none"; }, 100); setTimeout(() => { clearInterval(g); document.body.style.filter = "grayscale(1) contrast(2)"; c.innerHTML += "<br><br><span style='font-size:3rem; color:red'>YOU ARE MINE NOW</span>"; }, 3000); } }, 800); }
+
         // --- DRAGGABLE WINDOWS ---
         (function() { let z = 100; document.querySelectorAll('.window').forEach(w => { const bar = w.querySelector('.title-bar'); bar.onmousedown = (e) => { e.preventDefault(); z++; w.style.zIndex = z; let x = e.clientX, y = e.clientY; document.onmousemove = (e) => { e.preventDefault(); w.style.top = (w.offsetTop - (y - e.clientY)) + "px"; w.style.left = (w.offsetLeft - (x - e.clientX)) + "px"; x = e.clientX; y = e.clientY; }; document.onmouseup = () => document.onmousemove = null; }; }); })();
         
@@ -1106,7 +1106,7 @@ async function loadFFmpeg() {
         let paintInterval = null;
         let noiseCanvas = null;
         let noiseCtx = null;
-        let noiseLoop = null; // New loop for the static grain
+        let noiseLoop = null; 
 
         async function toggleCamera() {
             const video = document.getElementById('webcam-feed');
@@ -1119,7 +1119,7 @@ async function loadFFmpeg() {
                 if(videoStream.getTracks) videoStream.getTracks().forEach(track => track.stop());
                 videoStream = null;
                 clearInterval(paintInterval);
-                if (noiseLoop) clearInterval(noiseLoop); // STOP NOISE
+                if (noiseLoop) clearInterval(noiseLoop); 
                 
                 // Reset UI
                 const canvas = document.getElementById('mirror-canvas');
@@ -1146,7 +1146,7 @@ async function loadFFmpeg() {
                     status.innerText = "DETECTING BIOMETRICS...";
 
                     paintInterval = setInterval(paintFrame, 100); 
-                    noiseLoop = setInterval(drawNoise, 50); // START NOISE
+                    noiseLoop = setInterval(drawNoise, 50); 
                 } catch (err) {
                     console.error("CAMERA ERROR:", err);
                     alert("SENSOR ACCESS DENIED. CHECK PERMISSIONS.");
@@ -1164,22 +1164,17 @@ async function loadFFmpeg() {
             const w = noiseCanvas.width;
             const h = noiseCanvas.height;
             
-            // Clear the previous frame to avoid stacking noise
             noiseCtx.clearRect(0, 0, w, h);
             
             const pixelData = noiseCtx.createImageData(w, h);
             const data = pixelData.data;
-            const density = 0.02; // Reduced density: 2% of pixels (Finer grain look)
+            const density = 0.02; 
 
             for (let i = 0; i < data.length; i += 4) {
                 if (Math.random() < density) {
-                    // Draw a faint black pixel (Looks like tiny digital error)
-                    data[i] = 0;   // R
-                    data[i + 1] = 0; // G
-                    data[i + 2] = 0; // B
-                    data[i + 3] = 255; // A (Fully opaque)
+                    data[i] = 0; data[i + 1] = 0; data[i + 2] = 0; 
+                    data[i + 3] = 255; 
                 } else {
-                    // Transparent
                     data[i + 3] = 0;
                 }
             }
@@ -1204,11 +1199,10 @@ async function loadFFmpeg() {
                     let r = data[i]; let g = data[i + 1]; let b = data[i + 2];
                     let brightness = (r + g + b) / 3;
                     
-                    // Injecting Noise into the Threshold for Dithering/Grain
                     let dynamicThreshold = baseThreshold + (Math.random() * noiseIntensity) - (noiseIntensity / 2);
 
                     if (brightness < dynamicThreshold) { 
-                        data[i] = 0; data[i + 1] = 15; data[i + 2] = 0;
+                        data[i] = 0; data[i + 1] = 15; data[i + 2] = 0; 
                     } 
                     else { 
                         let glowNoise = (Math.random() - 0.5) * 60;
@@ -1223,9 +1217,8 @@ async function loadFFmpeg() {
             }
         }
 
-     async function captureSubject() {
+        async function captureSubject() {
             if (!isFFmpegLoaded) {
-                // If it's not loaded yet, try to load it first
                 await loadFFmpeg();
                 if (!isFFmpegLoaded) {
                     alert("FFmpeg core failed to load. Try refreshing.");
@@ -1236,31 +1229,30 @@ async function loadFFmpeg() {
             const status = document.getElementById('face-status');
             status.innerText = "CAPTURING...";
 
-            // 1. Get raw base image data (the highly pixelated feed)
             const mirrorCanvas = document.getElementById('mirror-canvas');
-            const baseDataURL = mirrorCanvas.toDataURL('image/png');
+            // CRITICAL: We need a large, sharp PNG to feed FFmpeg
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = 480;
+            tempCanvas.height = 360;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.imageSmoothingEnabled = false; // Force sharp pixels on capture canvas
+            tempCtx.drawImage(mirrorCanvas, 0, 0, 480, 360);
             
-            // 2. Convert DataURL to a raw file format FFmpeg can read
+            const baseDataURL = tempCanvas.toDataURL('image/png');
+            
             status.innerText = "PROCESSING SIGNAL...";
             const rawInput = await fetchFile(baseDataURL);
 
-            // 3. Write the input file to FFmpeg's memory filesystem
             await ffmpeg.FS('writeFile', 'input.png', rawInput);
 
-            // 4. Execute FFmpeg Command (The Secret Sauce)
-            // This command applies the high-quality glitch and upscaling:
-            // -i input.png: Input file
-            // -vf scale=480:360: Forcing the upscale (4x original size)
-            // -vf "noise=alls=10:allf=t+z": Adds complex analog noise/grain and flicker
-            // -c:v libx264 -t 1: Encodes a 1-second H.264 video loop for ultimate corruption
             try {
                 await ffmpeg.run(
                     '-i', 'input.png', 
                     '-pix_fmt', 'yuv420p',
-                    '-vf', 'scale=480:360,noise=alls=10:allf=t+z,pad=500:380:10:10:black', 
+                    '-vf', 'noise=alls=10:allf=t+z,pad=500:380:10:10:black', 
                     '-c:v', 'libx264',
                     '-preset', 'ultrafast',
-                    '-t', '1', // Create a short 1-second video loop
+                    '-t', '1', 
                     'output.mp4'
                 );
             } catch (e) {
@@ -1269,37 +1261,30 @@ async function loadFFmpeg() {
                 return;
             }
 
-            // 5. Read the final processed file from FFmpeg's memory
             status.innerText = "DOWNLOAD READY";
             const processedData = ffmpeg.FS('readFile', 'output.mp4');
 
-            // 6. Create Download Link for the MP4/Video File
             const videoBlob = new Blob([processedData.buffer], { type: 'video/mp4' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(videoBlob);
             link.download = 'EVIDENCE_' + Date.now() + '.mp4';
             link.click();
 
-            // 7. Cleanup and Feedback
             playSound('crunch');
             status.innerText = "PROCESSING COMPLETE";
             setTimeout(() => status.innerText = "CORE ONLINE", 3000); 
         }
+
         function closeOcular() {
             if(videoStream) toggleCamera();
             document.getElementById('ocular-window').style.display = 'none';
         }
-function openOcular() {
+
+        function openOcular() {
             closeAll();
             document.getElementById('ocular-window').style.display = 'flex';
-            loadFFmpeg(); // Added: Starts loading the core as soon as the window is opened
+            loadFFmpeg(); 
         }
     </script>
 </body>
 </html>
-
-
-
-
-
-
