@@ -580,25 +580,40 @@
             else if (trackIndex === 3) { const notes = [220, 261.63, 311.13, 392, 440]; const freq = notes[Math.floor(Math.random() * notes.length)]; osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = Math.random() * 20 - 10; gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol * 0.2, time + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); osc.start(time); osc.stop(time + 0.4); }
         }
         setTimeout(initSequencer, 500);
-
         // --- SYNTHESIS ENGINE V2 ---
         let synthRunning = false; let synthInterval = null; let analyser = null; let dataArray = null;
         let masterGain = null; let distortionNode = null; let reverbNode = null;
-        let pEntropy = 20; let pPressure = 0; let pHollow = 50;
+        // Default values
+        let pEntropy = 20; 
+        let pPressure = 0; 
+        let pHollow = 50;
 
-        // Immediate Feedback Listeners (Fixes "Broken" Feel)
-        ['entropy', 'pressure', 'hollow'].forEach(id => {
-            const el = document.getElementById('param-' + id);
-            const val = document.getElementById('val-' + id);
-            if(el && val) {
-                el.addEventListener('input', (e) => {
-                    val.innerText = e.target.value + "%";
-                    // Update variables immediately
-                    if(id === 'entropy') pEntropy = parseInt(e.target.value);
-                    if(id === 'pressure') pPressure = parseInt(e.target.value);
-                    if(id === 'hollow') pHollow = parseInt(e.target.value);
-                });
-            }
+        // BULLETPROOF LISTENER SETUP
+        // This waits for the page to be 100% ready before hooking up the wires
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log(">>> INITIALIZING KNOBS...");
+            
+            const params = ['entropy', 'pressure', 'hollow'];
+            
+            params.forEach(id => {
+                const slider = document.getElementById('param-' + id);
+                const label = document.getElementById('val-' + id);
+                
+                if (slider && label) {
+                    // Update the label immediately when dragging
+                    slider.addEventListener('input', (e) => {
+                        label.innerText = e.target.value + "%";
+                        
+                        // Update the internal variable too
+                        if(id === 'entropy') pEntropy = parseInt(e.target.value);
+                        if(id === 'pressure') pPressure = parseInt(e.target.value);
+                        if(id === 'hollow') pHollow = parseInt(e.target.value);
+                    });
+                    console.log(">>> KNOB CONNECTED: " + id);
+                } else {
+                    console.error(">>> FAILED TO FIND KNOB: " + id);
+                }
+            });
         });
 
         function initSynth() {
@@ -610,6 +625,7 @@
             distortionNode.connect(reverbNode); reverbNode.connect(masterGain); masterGain.connect(analyser); analyser.connect(audioCtx.destination);
             drawScope();
         }
+
         function toggleSynthesis() {
             const btn = document.getElementById('btn-synth-toggle');
             if(synthRunning) { 
@@ -625,13 +641,28 @@
                 synthInterval = setInterval(pulse, 125); 
             }
         }
+
         function pulse() {
             const now = audioCtx.currentTime;
-            pEntropy = parseInt(document.getElementById('param-entropy').value); pPressure = parseInt(document.getElementById('param-pressure').value); pHollow = parseInt(document.getElementById('param-hollow').value);
-            document.getElementById('val-entropy').innerText = pEntropy + "%"; document.getElementById('val-pressure').innerText = pPressure + "%"; document.getElementById('val-hollow').innerText = pHollow + "%";
+            
+            // Read values directly from DOM to be safe
+            const sliderE = document.getElementById('param-entropy');
+            const sliderP = document.getElementById('param-pressure');
+            const sliderH = document.getElementById('param-hollow');
+
+            if(sliderE) pEntropy = parseInt(sliderE.value);
+            if(sliderP) pPressure = parseInt(sliderP.value);
+            if(sliderH) pHollow = parseInt(sliderH.value);
+
+            // Update labels (redundant but safe)
+            document.getElementById('val-entropy').innerText = pEntropy + "%"; 
+            document.getElementById('val-pressure').innerText = pPressure + "%"; 
+            document.getElementById('val-hollow').innerText = pHollow + "%";
+            
             distortionNode.curve = makeDistortionCurve(pPressure * 2);
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(distortionNode);
             const vol = globalVol; 
+            
             if (Math.random() * 100 > pEntropy) {
                 osc.type = pPressure > 50 ? 'sawtooth' : 'sine'; const freq = pPressure > 80 ? 50 + Math.random()*50 : 60;
                 osc.frequency.setValueAtTime(freq, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.5);
@@ -661,6 +692,7 @@
         function makeDistortionCurve(amount) { const k = typeof amount === 'number' ? amount : 50; const n_samples = 44100; const curve = new Float32Array(n_samples); const deg = Math.PI / 180; for (let i = 0; i < n_samples; ++i ) { const x = i * 2 / n_samples - 1; curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) ); } return curve; }
         function impulseResponse(duration, decay, reverse) { const sampleRate = audioCtx.sampleRate; const length = sampleRate * duration; const impulse = audioCtx.createBuffer(2, length, sampleRate); const left = impulse.getChannelData(0); const right = impulse.getChannelData(1); for (let i = 0; i < length; i++){ const n = reverse ? length - i : i; left[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); right[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); } return impulse; }
 
+        
         // --- ORACLE ---
         let pendingCard3 = null;
         const tarotDeck = [
