@@ -493,8 +493,6 @@
     <div id="virus" class="overlay" style="background:black; display:none;"><div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;"><h1 class="flicker" style="color: #00ff00; font-size: 4rem;">SYSTEM PURGE</h1><div id="virus-console" style="text-align: left; font-family: monospace; color: #00ff00; font-size: 1.2rem;"></div></div></div>
     <div id="memory-dump-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; padding:40px; box-sizing:border-box;"><button onclick="document.getElementById('memory-dump-overlay').style.display='none'" style="position:absolute; top:20px; right:20px; background:transparent; color:white; border:1px solid white; cursor:pointer;">[ CLOSE FILE ]</button><div id="dump-content-overlay" style="color:#ff00ff; font-family:monospace; margin-top:40px; white-space: pre-wrap; font-size: 14px;"></div></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
-
     <script>
         // --- HIVE MIND CONFIGURATION ---
         const SUPABASE_URL = 'https://fkpxihftilgwuktsunjv.supabase.co';
@@ -502,14 +500,41 @@
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
 
-        // --- FFmpeg CONFIGURATION ---
-        // CRITICAL FIX: These must be declared *after* the script tag has loaded,
-        // which now happens right above this block.
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: false }); // Set log to false for cleaner console
+        // --- FFmpeg CONFIGURATION (Delayed Initialization) ---
+        let createFFmpeg, fetchFile, ffmpeg;
         let isFFmpegLoaded = false;
+        let isFFmpegScriptLoaded = false;
+
+        function loadFFmpegScript() {
+            if (isFFmpegScriptLoaded) return;
+            isFFmpegScriptLoaded = true;
+            
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js";
+            document.body.appendChild(script);
+
+            script.onload = () => {
+                // Initialize global FFmpeg objects once script is loaded
+                if (window.FFmpeg) {
+                    createFFmpeg = window.FFmpeg.createFFmpeg;
+                    fetchFile = window.FFmpeg.fetchFile;
+                    ffmpeg = createFFmpeg({ log: false }); 
+                }
+            };
+        }
 
         async function loadFFmpeg() {
+            if (!isFFmpegScriptLoaded) {
+                 // Should be loaded by openOcular, but double-check safety
+                 loadFFmpegScript();
+                 // Wait a moment for the script to execute
+                 await new Promise(r => setTimeout(r, 500)); 
+            }
+            if (!ffmpeg || !createFFmpeg) {
+                 document.getElementById('face-status').innerText = "CORE INIT ERROR. Refresh.";
+                 return;
+            }
+
             if (!ffmpeg.isLoaded()) {
                 document.getElementById('face-status').innerText = "LOADING CORE...";
                 await ffmpeg.load();
@@ -1229,6 +1254,7 @@
             const status = document.getElementById('face-status');
             status.innerText = "CAPTURING...";
 
+            // 1. Get raw base image data (the highly pixelated feed)
             const mirrorCanvas = document.getElementById('mirror-canvas');
             // CRITICAL: We need a large, sharp PNG to feed FFmpeg
             const tempCanvas = document.createElement('canvas');
@@ -1243,13 +1269,17 @@
             status.innerText = "PROCESSING SIGNAL...";
             const rawInput = await fetchFile(baseDataURL);
 
+            // 2. Write the input file to FFmpeg's memory filesystem
             await ffmpeg.FS('writeFile', 'input.png', rawInput);
 
+            // 3. Execute FFmpeg Command (The Secret Sauce)
+            // Filters: scale=480:360 (upscale), hqdn3d (noise reduction, optional), format=yuv420p (for mp4 encoding)
+            // Added: colorchannelmixer=1:0:0:0:0.5:1:0:0:0.5:0:1:0 (Subtle color aberration/shift)
             try {
                 await ffmpeg.run(
                     '-i', 'input.png', 
                     '-pix_fmt', 'yuv420p',
-                    '-vf', 'noise=alls=10:allf=t+z,pad=500:380:10:10:black', 
+                    '-vf', 'colorchannelmixer=1:0:0:0:0.5:1:0:0:0.5:0:1:0,scale=480:360,noise=alls=10:allf=t+z,pad=500:380:10:10:black', 
                     '-c:v', 'libx264',
                     '-preset', 'ultrafast',
                     '-t', '1', 
@@ -1261,15 +1291,18 @@
                 return;
             }
 
+            // 4. Read the final processed file
             status.innerText = "DOWNLOAD READY";
             const processedData = ffmpeg.FS('readFile', 'output.mp4');
 
+            // 5. Create Download Link
             const videoBlob = new Blob([processedData.buffer], { type: 'video/mp4' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(videoBlob);
             link.download = 'EVIDENCE_' + Date.now() + '.mp4';
             link.click();
 
+            // 6. Cleanup
             playSound('crunch');
             status.innerText = "PROCESSING COMPLETE";
             setTimeout(() => status.innerText = "CORE ONLINE", 3000); 
