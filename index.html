@@ -242,6 +242,11 @@
             #sequencer-grid .seq-step { flex: 1; height: 25px !important; min-width: 10px; border: 1px solid #333; }
             #bpm-slider { width: 80px !important; }
         }
+    /* SAFETY PATCH FOR GRID */
+.seq-step {
+    min-width: 15px !important; /* Forces the box to exist */
+    flex: 1;
+}
     </style>
 </head>
 <body>
@@ -1135,6 +1140,7 @@
     </script>
 </body>
 </html>
+
 
 
 
