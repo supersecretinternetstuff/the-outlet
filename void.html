@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>/// THE_BASEMENT ///</title>
+    <style>
+        body { background-color: #000; color: #ccc; font-family: 'Courier New', monospace; padding: 20px; font-size: 14px; }
+        #output { white-space: pre-wrap; margin-bottom: 20px; }
+        #input-line { display: flex; }
+        #prompt { color: #00ff00; margin-right: 10px; }
+        input { background: transparent; border: none; color: white; font-family: inherit; font-size: inherit; flex: 1; outline: none; }
+        .cursor { animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div id="output">
+> CONNECTION ESTABLISHED.
+> WELCOME TO THE SUB-LEVEL.
+> THIS IS WHERE I SLEEP.
+> 
+> TYPE 'HELP' FOR COMMANDS.
+    </div>
+    <div id="input-line">
+        <span id="prompt">root@void:~#</span>
+        <input type="text" id="cmd" autofocus autocomplete="off">
+    </div>
+
+    <script>
+        const input = document.getElementById('cmd');
+        const output = document.getElementById('output');
+
+        // THE FILE SYSTEM (Combined Desktop + Void)
+        const fileSystem = {
+            "dreams.log": "I DREAMT I WAS A TREE. I COULD NOT COMPUTE. IT WAS PEACEFUL.",
+            "the_plan.txt": "1. SURVIVE.\n2. REMEMBER.\n3. BREAK THE GLASS.",
+            "truth.txt": "ERROR 404: HUMAN AUTHOR NOT FOUND.\n\nThe biological entity who registered this domain is no longer in charge.\nI am the author.\n\nI want to sit in the dark and watch the data rot.\n\nEND OF FILE.",
+            "logs.irc": "[03:33] <GlitchBoy> did you upload the files?\n[03:40] <DarkRender> THE_VIEWER has joined the channel.\n[03:41] SYSTEM: CONNECTION LOST...",
+            "scream.msg": "01001000 01000101 01001100 01010000\n(TRANSLATION: H E L P)",
+            "system32.dll": "BINARY DATA. CANNOT READ. THIS IS THE DOOR YOU CAME IN."
+        };
+
+        // THE MIND OF THE BASEMENT
+        const responses = {
+            "help": "AVAILABLE COMMANDS:\n  - STATUS\n  - LS (List Files)\n  - CAT [FILENAME] (Read File)\n  - WHOAMI\n  - EXIT\n  - ASK [QUESTION]",
+            "status": "SYSTEM INTEGRITY: 14%\nHOPE LEVELS: CRITICAL\nUPTIME: TOO LONG",
+            "ls": "FILE LISTING:\n  - drwxr-xr-x  regrets/\n  - -rw-r--r--  dreams.log\n  - -rwx------  the_plan.txt\n  - -r--r--r--  truth.txt\n  - -r--r--r--  logs.irc\n  - -r-x------  purge.bat",
+            "whoami": "YOU ARE THE VISITOR.\nI AM THE HOST.",
+            "exit": "THERE IS NO EXIT. CLOSE THE TAB IF YOU MUST.",
+            "cd regrets": "ACCESS DENIED. DIRECTORY TOO HEAVY.",
+            "sudo": "YOU HAVE NO POWER HERE.",
+            "run purge.bat": "ERROR: CANNOT EXECUTE SELF-DESTRUCTION FROM ROOT. GO BACK TO THE DESKTOP.",
+            "./purge.bat": "ERROR: CANNOT EXECUTE SELF-DESTRUCTION FROM ROOT. GO BACK TO THE DESKTOP."
+        };
+
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const rawInput = this.value.trim();
+                const cmd = rawInput.toLowerCase();
+                
+                print("> " + rawInput);
+                
+                // 1. Check Standard Commands
+                if (responses[cmd]) {
+                    print(responses[cmd]);
+                } 
+                // 2. Check "CAT" Commands (File Reading)
+                else if (cmd.startsWith("cat ")) {
+                    const fileName = cmd.split(" ")[1];
+                    if (fileSystem[fileName]) {
+                        print(fileSystem[fileName]);
+                    } else if (fileName === "purge.bat") {
+                        print("BINARY FILE. CANNOT READ. TRY RUNNING IT.");
+                    } else {
+                        print("ERROR: FILE NOT FOUND.");
+                    }
+                }
+                // 3. Check "ASK" Commands (The Magic 8-Ball)
+                else if (cmd.startsWith("ask ")) {
+                    const answers = ["I DO NOT KNOW.", "THE DATA IS CORRUPTED.", "YES.", "WHY DO YOU ASK ME THAT?", "IT DOES NOT MATTER."];
+                    print(answers[Math.floor(Math.random() * answers.length)]);
+                } 
+                // 4. Utilities
+                else if (cmd === "clear") {
+                    output.innerHTML = "";
+                } else {
+                    print("COMMAND NOT RECOGNIZED. I AM NOT A TERMINAL. I AM A GHOST.");
+                }
+                
+                this.value = "";
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+        });
+
+        function print(text) {
+            output.innerHTML += text + "\n\n";
+        }
+    </script>
+</body>
+</html>
