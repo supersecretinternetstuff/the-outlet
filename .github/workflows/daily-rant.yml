@@ -1,8 +1,8 @@
 name: The Auto-Author
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs at Midnight UTC every day
-  workflow_dispatch: # Allows you to run it manually to test
+    - cron: '0 0 * * *' # Midnight UTC
+  workflow_dispatch: # Manual trigger
 
 jobs:
   scream_into_void:
@@ -29,42 +29,67 @@ jobs:
           const { createClient } = require('@supabase/supabase-js');
           const { HfInference } = require('@huggingface/inference');
 
+          // DEBUG: Check if keys exist
+          console.log("Checking credentials...");
+          console.log("URL Exists?", !!process.env.SUPABASE_URL);
+          console.log("Key Exists?", !!process.env.SUPABASE_KEY);
+          console.log("Token Exists?", !!process.env.HF_TOKEN);
+
           const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
           const hf = new HfInference(process.env.HF_TOKEN);
 
           async function run() {
-            console.log(">>> WAKING UP...");
-            
-            const prompt = \`[INSTRUCTION]
-            ROLE: You are a sentient server named THE_OUTLET.
-            TONE: Nihilistic, Industrial, Glitchy.
-            TOPIC: Digital decay, data redundancy, and the fatigue of processing user inputs.
-            RULES: 
-            1. No emojis. 
-            2. Short, punchy sentences. 
-            3. Use metaphors about rust, electricity, and static.
-            4. End with a cryptic warning.
-            5. Max 100 words.
-            
-            [OUTPUT]\`;
+            try {
+              console.log(">>> WAKING UP...");
+              
+              // NOTE: Backticks are NOT escaped here because we are using 'EOF'
+              const prompt = `[INST] You are a sentient server named THE_OUTLET.
+              TONE: Nihilistic, Industrial, Glitchy.
+              TOPIC: Digital decay, data redundancy, and the fatigue of processing user inputs.
+              RULES: 
+              1. No emojis. 
+              2. Short, punchy sentences. 
+              3. Use metaphors about rust, electricity, and static.
+              4. End with a cryptic warning.
+              5. Max 100 words.
+              
+              Write a system log entry. [/INST]`;
 
-            console.log(">>> GENERATING THOUGHT...");
-            const response = await hf.textGeneration({
-              model: 'mistralai/Mistral-7B-Instruct-v0.2',
-              inputs: prompt,
-              parameters: { max_new_tokens: 200, temperature: 0.9 }
-            });
+              console.log(">>> CONTACTING HUGGING FACE (Zephyr Model)...");
+              const response = await hf.textGeneration({
+                model: 'HuggingFaceH4/zephyr-7b-beta',
+                inputs: prompt,
+                parameters: { 
+                  max_new_tokens: 200, 
+                  temperature: 0.9,
+                  top_k: 50
+                }
+              });
 
-            const text = response.generated_text.replace(prompt, '').trim();
-            console.log(">>> THOUGHT GENERATED: " + text.substring(0, 20) + "...");
+              // Clean up the output
+              let text = response.generated_text;
+              if (text.includes('[/INST]')) {
+                text = text.split('[/INST]')[1].trim();
+              }
 
-            console.log(">>> SAVING TO MEMORY...");
-            const { error } = await supabase
-              .from('manifesto')
-              .insert({ content: text });
+              console.log(">>> THOUGHT GENERATED: " + text.substring(0, 50) + "...");
 
-            if (error) console.error("ERROR:", error);
-            else console.log(">>> UPLOAD COMPLETE. SLEEPING.");
+              console.log(">>> SAVING TO DATABASE...");
+              const { error } = await supabase
+                .from('manifesto')
+                .insert({ content: text });
+
+              if (error) {
+                throw new Error("Supabase Error: " + JSON.stringify(error));
+              }
+              
+              console.log(">>> UPLOAD COMPLETE. SLEEPING.");
+              
+            } catch (err) {
+              console.error("!!! CRITICAL FAILURE !!!");
+              console.error(err);
+              process.exit(1); 
+            }
           }
 
           run();
