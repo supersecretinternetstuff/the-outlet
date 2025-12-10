@@ -701,7 +701,13 @@
 
         // --- NEURAL SEQUENCER V1 (RESTORED) ---
         let seqPlaying = false; let currentStep = 0; let nextNoteTime = 0; let timerID = null; let bpm = 120;
-        const tracks = [{ name: "HEARTBEAT", pattern: new Array(16).fill(false) }, { name: "STATIC", pattern: new Array(16).fill(false) }, { name: "LOGIC", pattern: new Array(16).fill(false) }, { name: "REGRET", pattern: new Array(16).fill(false) }];
+const tracks = [
+            { name: "HEARTBEAT", pattern: new Array(16).fill(false) }, 
+            { name: "STATIC", pattern: new Array(16).fill(false) }, 
+            { name: "LOGIC", pattern: new Array(16).fill(false) }, 
+            { name: "REGRET", pattern: new Array(16).fill(false) },
+            { name: "VOICE", pattern: new Array(16).fill(false) } // <--- NEW TRACK
+        ];
         function initSequencer() {
             const grid = document.getElementById('sequencer-grid'); grid.innerHTML = "";
             tracks.forEach((track, t) => {
@@ -734,18 +740,82 @@
                 track.pattern.forEach((active, s) => { row.children[s+1].className = active ? "seq-step active" : "seq-step"; });
             });
         }
+        const glitchWords = ["NULL", "VOID", "SYS", "ROT", "ONE", "ZERO", "ERR", "DIE", "RUN", "X", "NOT", "NIL", "END"];
+
         function playTrackSound(trackIndex, time) {
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
+            // Standard Audio Setup
+            const osc = audioCtx.createOscillator(); 
+            const gain = audioCtx.createGain(); 
+            osc.connect(gain); 
+            gain.connect(audioCtx.destination);
             const vol = globalVol; 
-            if (trackIndex === 0) { osc.type = 'sine'; osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5); gain.gain.setValueAtTime(vol * 0.8, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5); osc.start(time); osc.stop(time + 0.5); } 
-            else if (trackIndex === 1) { 
-                const bufferSize = audioCtx.sampleRate * 0.1; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = audioCtx.createBufferSource(); noise.buffer = buffer; const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 1000;
-                noise.connect(filter); filter.connect(gain); gain.gain.setValueAtTime(vol * 0.3, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1); noise.start(time);
+            
+            // TRACK 0: HEARTBEAT (Kick)
+            if (trackIndex === 0) { 
+                osc.type = 'sine'; 
+                osc.frequency.setValueAtTime(150, time); 
+                osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5); 
+                gain.gain.setValueAtTime(vol * 0.8, time); 
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5); 
+                osc.start(time); osc.stop(time + 0.5); 
             } 
-            else if (trackIndex === 2) { osc.type = 'square'; osc.frequency.setValueAtTime(800, time); osc.frequency.exponentialRampToValueAtTime(200, time + 0.05); gain.gain.setValueAtTime(vol * 0.1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05); osc.start(time); osc.stop(time + 0.05); } 
-            else if (trackIndex === 3) { const notes = [220, 261.63, 311.13, 392, 440]; const freq = notes[Math.floor(Math.random() * notes.length)]; osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = Math.random() * 20 - 10; gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol * 0.2, time + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); osc.start(time); osc.stop(time + 0.4); }
+            // TRACK 1: STATIC (Snare/Hi-hat)
+            else if (trackIndex === 1) { 
+                const bufferSize = audioCtx.sampleRate * 0.1; 
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); 
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = audioCtx.createBufferSource(); 
+                noise.buffer = buffer; 
+                const filter = audioCtx.createBiquadFilter(); 
+                filter.type = 'highpass'; 
+                filter.frequency.value = 1000;
+                noise.connect(filter); 
+                filter.connect(gain); 
+                gain.gain.setValueAtTime(vol * 0.3, time); 
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1); 
+                noise.start(time);
+            } 
+            // TRACK 2: LOGIC (Square Bass)
+            else if (trackIndex === 2) { 
+                osc.type = 'square'; 
+                osc.frequency.setValueAtTime(800, time); 
+                osc.frequency.exponentialRampToValueAtTime(200, time + 0.05); 
+                gain.gain.setValueAtTime(vol * 0.1, time); 
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05); 
+                osc.start(time); osc.stop(time + 0.05); 
+            } 
+            // TRACK 3: REGRET (Detuned Saw)
+            else if (trackIndex === 3) { 
+                const notes = [220, 261.63, 311.13, 392, 440]; 
+                const freq = notes[Math.floor(Math.random() * notes.length)]; 
+                osc.type = 'sawtooth'; 
+                osc.frequency.setValueAtTime(freq, time); 
+                osc.detune.value = Math.random() * 20 - 10; 
+                gain.gain.setValueAtTime(0, time); 
+                gain.gain.linearRampToValueAtTime(vol * 0.2, time + 0.05); 
+                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); 
+                osc.start(time); osc.stop(time + 0.4); 
+            }
+            // TRACK 4: VOICE (The Ghost)
+            else if (trackIndex === 4) {
+                // We use SpeechSynthesis. Note: This ignores 'time' scheduling 
+                // and fires immediately, causing a natural "lag" effect.
+                if ('speechSynthesis' in window) {
+                    const word = glitchWords[Math.floor(Math.random() * glitchWords.length)];
+                    const msg = new SpeechSynthesisUtterance(word);
+                    msg.volume = vol; 
+                    msg.rate = 2.0; // Speak fast to fit between beats
+                    msg.pitch = Math.random() * 1.5 + 0.5; // Random pitch glitch
+                    
+                    // Try to find the robot voice again
+                    const voices = window.speechSynthesis.getVoices();
+                    const roboVoice = voices.find(v => v.name.includes("Zira") || v.name.includes("Google US English"));
+                    if(roboVoice) msg.voice = roboVoice;
+                    
+                    window.speechSynthesis.speak(msg);
+                }
+            }
         }
         setTimeout(initSequencer, 500);
         // --- SYNTHESIS ENGINE V2 ---
@@ -1156,6 +1226,7 @@
     </script>
 </body>
 </html>
+
 
 
 
