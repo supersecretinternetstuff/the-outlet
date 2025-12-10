@@ -174,6 +174,69 @@
     box-shadow: 0 0 10px var(--alert-color);
     text-shadow: 2px 0px 0px black, -2px 0px 0px black;
 }
+        /* === MOBILE OVERRIDE (THE FEED) === */
+        @media (max-width: 768px) {
+            /* 1. Stop the dragging metaphor */
+            body {
+                overflow-y: auto; /* Allow scrolling down the feed */
+                height: auto;     /* Let the body grow */
+                padding-bottom: 50px;
+                background-size: 100% 2px, 3px 100%; /* Keep grid but adjust */
+            }
+
+            /* 2. Stack the windows */
+            .window {
+                position: relative !important; /* Force them into the flow */
+                top: auto !important;
+                left: auto !important;
+                width: 90% !important;
+                margin: 20px auto !important; /* Center them */
+                transform: none !important;
+                height: auto !important; /* Let them expand */
+                box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+            }
+
+            /* 3. Adjust the content */
+            .window-content {
+                display: block !important; /* Force content visible */
+            }
+
+            /* 4. Hide drag controls (They don't work here) */
+            .toggle-icon, .controls {
+                display: none; 
+            }
+            .title-bar {
+                cursor: default;
+                justify-content: center; /* Center the title */
+            }
+
+            /* 5. Fix the Overlays */
+            .overlay {
+                padding: 10px;
+            }
+            .txt-doc {
+                width: 100%;
+                font-size: 11px; /* Readable on small screens */
+            }
+
+            /* 6. Adjust Specific Tools */
+            #hud-observer, #hud-theme, #hud-pet {
+                position: relative;
+                width: 90%;
+                margin: 10px auto;
+                bottom: auto; right: auto; left: auto; top: auto;
+            }
+            
+            /* Hide the visualizers that might be too heavy/small */
+            #scope-canvas { width: 100%; }
+            
+            /* Make the Tarot cards stack horizontally but smaller */
+            .tarot-card { height: 100px; }
+            
+            /* Hardcore Timer Adjustment */
+            .meta-footer { font-size: 10px; }
+            .hardcore-timer { font-size: 14px; letter-spacing: 1px; }
+        }
     </style>
 </head>
 <body>
@@ -1033,6 +1096,7 @@
     </script>
 </body>
 </html>
+
 
 
 
