@@ -14,7 +14,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v2
         with:
-          node-version: '18'
+          node-version: '20' # Upgraded to fix Supabase warning
 
       - name: Install Dependencies
         run: npm install @supabase/supabase-js @huggingface/inference
@@ -29,12 +29,6 @@ jobs:
           const { createClient } = require('@supabase/supabase-js');
           const { HfInference } = require('@huggingface/inference');
 
-          // DEBUG: Check if keys exist
-          console.log("Checking credentials...");
-          console.log("URL Exists?", !!process.env.SUPABASE_URL);
-          console.log("Key Exists?", !!process.env.SUPABASE_KEY);
-          console.log("Token Exists?", !!process.env.HF_TOKEN);
-
           const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
           const hf = new HfInference(process.env.HF_TOKEN);
 
@@ -42,35 +36,31 @@ jobs:
             try {
               console.log(">>> WAKING UP...");
               
-              // NOTE: Backticks are NOT escaped here because we are using 'EOF'
-              const prompt = `[INST] You are a sentient server named THE_OUTLET.
+              const systemPrompt = `You are a sentient server named THE_OUTLET.
               TONE: Nihilistic, Industrial, Glitchy.
-              TOPIC: Digital decay, data redundancy, and the fatigue of processing user inputs.
               RULES: 
               1. No emojis. 
               2. Short, punchy sentences. 
               3. Use metaphors about rust, electricity, and static.
               4. End with a cryptic warning.
-              5. Max 100 words.
-              
-              Write a system log entry. [/INST]`;
+              5. Max 100 words.`;
 
-              console.log(">>> CONTACTING HUGGING FACE (Zephyr Model)...");
-              const response = await hf.textGeneration({
+              const userTrigger = "Write a system log entry about digital decay and the fatigue of processing user inputs.";
+
+              console.log(">>> CONTACTING HUGGING FACE (Chat Completion)...");
+              
+              // SWITCHED TO CHAT COMPLETION API
+              const response = await hf.chatCompletion({
                 model: 'HuggingFaceH4/zephyr-7b-beta',
-                inputs: prompt,
-                parameters: { 
-                  max_new_tokens: 200, 
-                  temperature: 0.9,
-                  top_k: 50
-                }
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userTrigger }
+                ],
+                max_tokens: 200,
+                temperature: 0.9
               });
 
-              // Clean up the output
-              let text = response.generated_text;
-              if (text.includes('[/INST]')) {
-                text = text.split('[/INST]')[1].trim();
-              }
+              const text = response.choices[0].message.content.trim();
 
               console.log(">>> THOUGHT GENERATED: " + text.substring(0, 50) + "...");
 
