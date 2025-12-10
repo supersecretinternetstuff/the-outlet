@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>/// THE_OUTLET ///</title>
+    <title>/// THE_OUTLET ///</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22black%22/><text y=%22.9em%22 font-size=%2290%22>👁️</text></svg>">
     <style>
         /* --- CHAOS ENGINE --- */
@@ -25,7 +26,7 @@
             color: var(--main-color);
             cursor: crosshair;
             user-select: none;
-            transition: background-color 0.1s; /* Faster for the strobe effect */
+            transition: background-color 0.1s;
         }
 
         /* ANIMATIONS */
@@ -263,7 +264,7 @@
     </div>
 
     <div class="window" style="top: 400px; left: 50px; width: 450px; height: 32px;">
-        <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> SYNTHESIS_ENGINE_V2.exe</span><div class="controls"><button onclick="toggleMinimize(this)">_</button><button>X</button></div></div>
+        <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> SYNTHESIS_ENGINE_V2.exe</span><div class="controls"><button onclick="minimize(this)">_</button><button>X</button></div></div>
         <div class="window-content" style="text-align: center; display: none;">
             <canvas id="scope-canvas" width="430" height="100" style="background: #000500; border: 1px solid var(--main-color); margin-bottom: 10px;"></canvas>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
@@ -302,116 +303,47 @@
     <div id="memory-dump-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; padding:40px; box-sizing:border-box;"><button onclick="document.getElementById('memory-dump-overlay').style.display='none'" style="position:absolute; top:20px; right:20px; background:transparent; color:white; border:1px solid white; cursor:pointer;">[ CLOSE FILE ]</button><div id="dump-content-overlay" style="color:#ff00ff; font-family:monospace; margin-top:40px; white-space: pre-wrap; font-size: 14px;"></div></div>
 
     <script>
+        // --- HIVE MIND CONFIGURATION ---
+        const SUPABASE_URL = https://fkpxihftilgwuktsunjv.supabase.co;
+        const SUPABASE_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHhpaGZ0aWxnd3VrdHN1bmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMzU3ODQsImV4cCI6MjA4MDkxMTc4NH0.61WQz6gC1IURkueQuhuZJclZr5enva4NlWMhYFq3ntc;
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const GLOBAL_ID = 1; 
+
         // --- AUDIO ENGINE ---
         let audioCtx;
         let globalVol = 0.5;
 
         function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
         }
 
         function toggleAudio() {
             const btn = document.getElementById('btn-audio');
-            if (globalVol >= 0.2) {
-                globalVol = 0.02; // Whisper
-                btn.innerText = "[ AUDIO: MIN ]";
-                btn.style.opacity = "0.5";
-            } else {
-                globalVol = 0.5;
-                btn.innerText = "[ AUDIO: MAX ]";
-                btn.style.opacity = "1";
-                // Only play feedback if user clicks this button
-                playSound('crunch'); 
-            }
+            if (globalVol >= 0.2) { globalVol = 0.02; btn.innerText = "[ AUDIO: MIN ]"; btn.style.opacity = "0.5"; }
+            else { globalVol = 0.5; btn.innerText = "[ AUDIO: MAX ]"; btn.style.opacity = "1"; playSound('crunch'); }
         }
 
         function playSound(type) {
-            // NO CLICK/HOVER SOUNDS. SILENCE.
-            if (!audioCtx) initAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            const now = audioCtx.currentTime;
-            const vol = globalVol; 
-
-            if(type === 'error') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(100, now);
-                osc.frequency.linearRampToValueAtTime(50, now + 0.5);
-                gain.gain.setValueAtTime(vol * 0.5, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now);
-                osc.stop(now + 0.5);
-            } else if(type === 'crunch') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(200 + Math.random()*200, now);
-                osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
-                gain.gain.setValueAtTime(vol * 0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-                osc.start(now);
-                osc.stop(now + 0.1);
-            }
+            // NO CLICK/HOVER SOUNDS. ONLY FUNCTIONAL.
+            if (!audioCtx) initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime; const vol = globalVol; 
+            
+            if(type === 'error') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.linearRampToValueAtTime(50, now + 0.5); gain.gain.setValueAtTime(vol * 0.5, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.5); osc.start(now); osc.stop(now + 0.5); } 
+            else if(type === 'crunch') { osc.type = 'square'; osc.frequency.setValueAtTime(200 + Math.random()*200, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.1); gain.gain.setValueAtTime(vol * 0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }
         }
 
         function playMoodSound(mood) {
-            if (!audioCtx) initAudio();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            const now = audioCtx.currentTime;
-            const vol = globalVol;
-
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            if (mood === 'green') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(440, now);
-                osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
-                gain.gain.setValueAtTime(vol * 0.6, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
-                osc.start(now);
-                osc.stop(now + 0.6);
-            } 
-            else if (mood === 'red') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(150, now);
-                osc.frequency.exponentialRampToValueAtTime(10, now + 0.4);
-                gain.gain.setValueAtTime(vol * 0.7, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                osc.start(now);
-                osc.stop(now + 0.4);
-            }
-            else if (mood === 'blue') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.linearRampToValueAtTime(200, now + 1.0);
-                gain.gain.setValueAtTime(vol * 0.5, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 1.5);
-                osc.start(now);
-                osc.stop(now + 1.5);
-            }
-            else if (mood === 'white') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(8000, now); 
-                gain.gain.setValueAtTime(vol * 0.2, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now);
-                osc.stop(now + 0.5);
-            }
+            if (!audioCtx) initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume();
+            const now = audioCtx.currentTime; const vol = globalVol; 
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
+            if (mood === 'green') { osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.3); gain.gain.setValueAtTime(vol * 0.6, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.6); osc.start(now); osc.stop(now + 0.6); } 
+            else if (mood === 'red') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.4); gain.gain.setValueAtTime(vol * 0.7, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4); osc.start(now); osc.stop(now + 0.4); }
+            else if (mood === 'blue') { osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(200, now + 1.0); gain.gain.setValueAtTime(vol * 0.5, now); gain.gain.linearRampToValueAtTime(0.01, now + 1.5); osc.start(now); osc.stop(now + 1.5); }
+            else if (mood === 'white') { osc.type = 'sine'; osc.frequency.setValueAtTime(8000, now); gain.gain.setValueAtTime(vol * 0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.5); osc.start(now); osc.stop(now + 0.5); }
         }
 
-        // --- KEYBOARD LISTENERS FOR AMYGDALA ---
         document.addEventListener('keydown', (e) => {
             if(e.key === '1') setMood('green');
             if(e.key === '2') setMood('red');
@@ -419,18 +351,32 @@
             if(e.key === '4') setMood('white');
         });
 
+        // --- HIVE MIND LOGIC ---
+        async function initHiveMind() {
+            console.log("> CONNECTING TO HIVE MIND...");
+            const { data } = await client.from('global_state').select('*').eq('id', GLOBAL_ID).single();
+            if (data) applyHiveState(data);
+            client.channel('public:global_state').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'global_state' }, payload => { applyHiveState(payload.new); }).subscribe();
+            const { data: manifestoData } = await client.from('manifesto').select('content').order('generated_at', { ascending: false }).limit(1).single();
+            if (manifestoData) document.querySelector('#manifesto .txt-doc p').innerText = manifestoData.content;
+        }
+        function applyHiveState(state) {
+            if (state.current_mood) {
+                const root = document.documentElement;
+                if (state.current_mood === 'green') { root.style.setProperty('--main-color', '#00ff00'); root.style.setProperty('--border-color', '#005500'); }
+                if (state.current_mood === 'red') { root.style.setProperty('--main-color', '#ff3333'); root.style.setProperty('--border-color', '#550000'); }
+                if (state.current_mood === 'blue') { root.style.setProperty('--main-color', '#5555ff'); root.style.setProperty('--border-color', '#000055'); }
+                if (state.current_mood === 'white') { root.style.setProperty('--main-color', '#ffffff'); root.style.setProperty('--border-color', '#555555'); }
+            }
+            if (state.pet_hunger !== undefined) { hunger = state.pet_hunger; updatePetFace(); }
+        }
+        initHiveMind();
+
         // --- WINDOW TOGGLE ---
         function toggleMinimize(el) {
-            const win = el.closest('.window');
-            const content = win.querySelector('.window-content');
-            if (content.style.display === 'none') {
-                content.style.display = 'block';
-                if(content.querySelector('#memory-grid') || content.querySelector('#sequencer-grid')) content.style.display = 'flex';
-                win.style.height = 'auto';
-            } else {
-                content.style.display = 'none';
-                win.style.height = '32px'; 
-            }
+            const win = el.closest('.window'); const content = win.querySelector('.window-content');
+            if (content.style.display === 'none') { content.style.display = 'block'; if(content.querySelector('#memory-grid') || content.querySelector('#sequencer-grid')) content.style.display = 'flex'; win.style.height = 'auto'; } 
+            else { content.style.display = 'none'; win.style.height = '32px'; }
         }
         function minimize(btn) { toggleMinimize(btn); }
 
@@ -450,35 +396,37 @@
             utilityScore = Math.max(0, Math.min(100, utilityScore));
             document.getElementById('user-status').innerText = status;
             document.getElementById('user-status').style.color = (status==="ERRATIC"||status==="WASTING_CYCLES") ? "red" : "var(--main-color)";
-            const bar = document.getElementById('utility-bar');
-            bar.style.width = utilityScore+"%";
-            bar.style.background = utilityScore>80 ? "#00ff00" : (utilityScore>40 ? "yellow" : "red");
+            document.getElementById('utility-bar').style.width = utilityScore+"%";
+            document.getElementById('utility-bar').style.background = utilityScore>80 ? "#00ff00" : (utilityScore>40 ? "yellow" : "red");
             document.getElementById('utility-text').innerText = utilityScore.toFixed(1) + "% " + (utilityScore>80?"(OPTIMAL)":(utilityScore>40?"(ADEQUATE)":"(OBSOLETE)"));
             lastX=mouseX; lastY=mouseY;
         }, 100);
 
-        // --- MOOD CONTROLLER ---
-        function setMood(mood) {
-            const root = document.documentElement;
+        // --- MOOD CONTROLLER (NETWORKED) ---
+        async function setMood(mood) {
             playMoodSound(mood);
-            
+            // Optimistic Update
+            const root = document.documentElement;
             if(mood === 'green') { root.style.setProperty('--main-color', '#00ff00'); root.style.setProperty('--border-color', '#005500'); }
             if(mood === 'red') { root.style.setProperty('--main-color', '#ff3333'); root.style.setProperty('--border-color', '#550000'); }
             if(mood === 'blue') { root.style.setProperty('--main-color', '#5555ff'); root.style.setProperty('--border-color', '#000055'); }
             if(mood === 'white') { root.style.setProperty('--main-color', '#ffffff'); root.style.setProperty('--border-color', '#555555'); }
+            // Network
+            await client.from('global_state').update({ current_mood: mood }).eq('id', GLOBAL_ID);
         }
 
-        // --- PET DAEMON ---
+        // --- PET DAEMON (NETWORKED) ---
         let hunger = 100;
-        setInterval(() => {
-            hunger--; document.getElementById('hunger-bar').style.width = hunger + "%";
+        setInterval(() => { hunger--; updatePetFace(); }, 1000); 
+        function updatePetFace() {
+            document.getElementById('hunger-bar').style.width = hunger + "%";
             const face = document.getElementById('pet-face');
             if(hunger > 70) face.innerHTML = "  (o_o)\n  /| |\\\n   \" \"";
             else if(hunger > 30) face.innerHTML = "  (-_-)\n  /| |\\\n   \" \"";
             else if(hunger > 0) face.innerHTML = "  (X_X)\n  /| |\\\n   \" \"";
             else { face.innerHTML = "  DEAD \n  RIP"; hunger = 0; }
-        }, 500);
-        function feedPet() { hunger = Math.min(100, hunger + 20); playSound('crunch'); }
+        }
+        async function feedPet() { hunger = Math.min(100, hunger + 20); playSound('crunch'); updatePetFace(); await client.from('global_state').update({ pet_hunger: hunger }).eq('id', GLOBAL_ID); }
 
         // --- NEURAL SEQUENCER V1 (RESTORED) ---
         let seqPlaying = false; let currentStep = 0; let nextNoteTime = 0; let timerID = null; let bpm = 120;
@@ -548,13 +496,11 @@
             const btn = document.getElementById('btn-synth-toggle');
             if(synthRunning) { 
                 clearInterval(synthInterval); synthRunning = false; btn.innerText = "[ INITIATE CORE ]"; 
-                // CRITICAL FIX: Cancel scheduled values to allow clean restart
                 masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
                 masterGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1); 
             } 
             else { 
                 if(!masterGain) initSynth(); 
-                // CRITICAL FIX: Cancel scheduled fade-outs
                 masterGain.gain.cancelScheduledValues(audioCtx.currentTime);
                 masterGain.gain.setValueAtTime(0.5, audioCtx.currentTime); 
                 synthRunning = true; btn.innerText = "[ ABORT SEQUENCE ]"; 
@@ -733,17 +679,12 @@
         (function() { let z = 100; document.querySelectorAll('.window').forEach(w => { const bar = w.querySelector('.title-bar'); bar.onmousedown = (e) => { e.preventDefault(); z++; w.style.zIndex = z; let x = e.clientX, y = e.clientY; document.onmousemove = (e) => { e.preventDefault(); w.style.top = (w.offsetTop - (y - e.clientY)) + "px"; w.style.left = (w.offsetLeft - (x - e.clientX)) + "px"; x = e.clientX; y = e.clientY; }; document.onmouseup = () => document.onmousemove = null; }; }); })();
         
         // --- LONG TERM MEMORY ---
+        // (Replaced by Hive Mind, but kept for local backup)
         function saveState() {
             const state = { hunger: hunger, mood: getComputedStyle(document.documentElement).getPropertyValue('--main-color').trim(), borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim(), score: utilityScore, memoriesFound: document.getElementById('memory-log').innerHTML };
             localStorage.setItem('THE_OUTLET_STATE', JSON.stringify(state));
         }
-        function loadState() {
-            const data = localStorage.getItem('THE_OUTLET_STATE'); if (!data) return;
-            const state = JSON.parse(data); hunger = state.hunger; utilityScore = state.score;
-            document.documentElement.style.setProperty('--main-color', state.mood); document.documentElement.style.setProperty('--border-color', state.borderColor);
-            if(state.memoriesFound) document.getElementById('memory-log').innerHTML = state.memoriesFound;
-        }
-        setInterval(saveState, 2000); loadState();
+        setInterval(saveState, 2000); 
     </script>
 </body>
 </html>
