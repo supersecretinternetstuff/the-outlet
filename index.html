@@ -981,13 +981,15 @@ async function loadFFmpeg() {
             });
             ctx.restore(); ctx.fillStyle = "white"; ctx.textAlign="left"; ctx.fillText("CLARITY: " + score + "%", 10, 20); if(!isGameOver) gameLoopId = requestAnimationFrame(gameLoop);
         }
+// --- SYSTEM (INPUT FIX) ---
+        document.getElementById('enter-overlay').addEventListener('click', function() { 
+            this.style.display = 'none'; // CRITICAL: Hide the overlay immediately on click
 
-        // --- SYSTEM ---
-        document.getElementById('enter-overlay').addEventListener('click', function() { this.style.display = 'none'; initAudio(); document.getElementById('bg-audio').volume = 0.4; document.getElementById('bg-audio').play().catch(e=>console.log(e)); });
-        function openOverlay(id) { closeAll(); document.getElementById(id).style.display = 'block'; }
-        function closeAll() { document.querySelectorAll('.overlay').forEach(o=>o.style.display='none'); document.body.style.filter = "none"; document.body.classList.remove("shake-screen"); }
-        function runVirus() { openOverlay('virus'); const c = document.getElementById('virus-console'); const l = ["Deleting System32...", "Overwriting BIOS...", "Harvesting User Data...", "FATAL ERROR: SOUL NOT FOUND"]; let i = 0; c.innerHTML = ""; let int = setInterval(() => { if (i < l.length) { c.innerHTML += "> " + l[i] + "<br>"; i++; } else { clearInterval(int); document.body.classList.add("shake-screen"); let inv = false; let g = setInterval(() => { inv = !inv; document.body.style.filter = inv ? "invert(1)" : "none"; }, 100); setTimeout(() => { clearInterval(g); document.body.style.filter = "grayscale(1) contrast(2)"; c.innerHTML += "<br><br><span style='font-size:3rem; color:red'>YOU ARE MINE NOW</span>"; }, 3000); } }, 800); }
-
+            // Now, we can safely attempt audio start in the background
+            initAudio(); 
+            document.getElementById('bg-audio').volume = 0.4; 
+            document.getElementById('bg-audio').play().catch(e=>console.log("Audio play failed, continuing anyway."));
+        });
         // --- DRAGGABLE WINDOWS ---
         (function() { let z = 100; document.querySelectorAll('.window').forEach(w => { const bar = w.querySelector('.title-bar'); bar.onmousedown = (e) => { e.preventDefault(); z++; w.style.zIndex = z; let x = e.clientX, y = e.clientY; document.onmousemove = (e) => { e.preventDefault(); w.style.top = (w.offsetTop - (y - e.clientY)) + "px"; w.style.left = (w.offsetLeft - (x - e.clientX)) + "px"; x = e.clientX; y = e.clientY; }; document.onmouseup = () => document.onmousemove = null; }; }); })();
         
@@ -1295,6 +1297,7 @@ function openOcular() {
     </script>
 </body>
 </html>
+
 
 
 
