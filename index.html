@@ -102,42 +102,76 @@
         }
         .amygdala-pad:active { background: var(--main-color); color: black; transform: scale(0.95); }
 
-        /* --- COMPONENT: VERTICAL SLIDERS (ROTATION HACK) --- */
-        .knob-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
-        .knob-container label { font-size: 10px; color: var(--main-color); margin-bottom: 40px; /* Space for rotation */ }
-        .knob-container span { font-size: 10px; margin-top: 40px; color: gray; }
+        /* --- COMPONENT: VERTICAL SLIDERS (FORCED ROTATION) --- */
+        .knob-container { 
+            display: flex; flex-direction: column; align-items: center; 
+            height: 120px; /* Force container height */
+            justify-content: center;
+        }
+        .knob-container label { margin-bottom: 45px; font-size: 10px; color: var(--main-color); }
+        .knob-container span { margin-top: 45px; font-size: 10px; color: gray; }
         
         .vertical-slider {
-            -webkit-appearance: none; appearance: none;
-            width: 100px; height: 10px; /* Width becomes Height when rotated */
-            background: #111; border: 1px solid var(--border-color);
-            outline: none; transform: rotate(270deg); cursor: ns-resize;
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            width: 100px !important;  /* Length of the slider */
+            height: 10px !important;  /* Thickness of the track */
+            background: #111 !important;
+            border: 1px solid var(--border-color) !important;
+            transform: rotate(270deg); /* Force Rotation */
+            margin: 0;
+            cursor: ns-resize;
+            outline: none;
         }
+        
         .vertical-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 15px; height: 20px;
-            background: var(--main-color); border: 1px solid black;
-            cursor: ns-resize; box-shadow: 0 0 5px var(--main-color);
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            width: 20px;
+            height: 20px;
+            background: var(--main-color);
+            border: 1px solid black;
+            cursor: ns-resize;
+            box-shadow: 0 0 5px var(--main-color);
         }
         .vertical-slider::-moz-range-thumb {
-            width: 15px; height: 20px;
+            width: 20px; height: 20px;
             background: var(--main-color); border: 1px solid black;
             cursor: ns-resize; box-shadow: 0 0 5px var(--main-color);
         }
 
-        /* --- COMPONENT: NEURAL SEQUENCER (FIXED LAYOUT) --- */
-        #sequencer-grid { display: flex; flex-direction: column; width: 100%; gap: 4px; }
+        /* --- COMPONENT: NEURAL SEQUENCER (FIXED) --- */
+        #sequencer-grid { 
+            display: flex; 
+            flex-direction: column; 
+            width: 100%; 
+            gap: 2px; 
+        }
         .seq-row { 
-            display: flex; flex-direction: row; align-items: center; 
-            width: 100%; height: 20px;
+            display: flex !important; 
+            flex-direction: row !important; 
+            width: 100%; 
+            height: 20px; 
+            align-items: center;
+            flex-wrap: nowrap !important;
         }
         .seq-label { 
-            width: 70px; min-width: 70px; font-size: 10px; 
-            text-align: right; padding-right: 8px; opacity: 0.8; flex-shrink: 0;
+            width: 70px; 
+            min-width: 70px; /* Force width */
+            font-size: 10px; 
+            text-align: right; 
+            padding-right: 8px; 
+            opacity: 0.8; 
+            flex-shrink: 0;
         }
         .seq-step { 
-            flex: 1; height: 100%; background: #111; 
-            border: 1px solid #333; cursor: pointer; margin-right: 1px; min-width: 5px;
+            flex: 1; 
+            height: 100%; 
+            background: #111; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            min-width: 10px; /* CRITICAL FIX: Stops them from vanishing */
+            margin-right: 1px;
         }
         .seq-step.active { 
             background: var(--main-color) !important; 
@@ -172,10 +206,12 @@
         .card-art { font-size: 10px; line-height: 10px; font-weight: bold; }
 
         /* ============================ */
-        /* /// MOBILE OVERRIDE (V2) /// */
+        /* /// MOBILE OVERRIDE (V3) /// */
         /* ============================ */
         @media (max-width: 768px) {
             body { overflow-y: auto !important; height: auto !important; padding-bottom: 80px; background-attachment: fixed; }
+            
+            /* FORCE STACK */
             .window {
                 position: relative !important; top: auto !important; left: auto !important; right: auto !important;
                 width: 94% !important; margin: 15px auto !important; transform: none !important;
@@ -608,15 +644,17 @@
         }
         async function feedPet() { hunger = Math.min(100, hunger + 20); playSound('crunch'); updatePetFace(); await client.from('global_state').update({ pet_hunger: hunger }).eq('id', GLOBAL_ID); }
 
-        // --- NEURAL SEQUENCER V1 (RESTORED) ---
+       // --- NEURAL SEQUENCER V1 ---
         let seqPlaying = false; let currentStep = 0; let nextNoteTime = 0; let timerID = null; let bpm = 120;
-const tracks = [
+        
+        // UPDATED TRACKS: Removed VOICE
+        const tracks = [
             { name: "HEARTBEAT", pattern: new Array(16).fill(false) }, 
             { name: "STATIC", pattern: new Array(16).fill(false) }, 
             { name: "LOGIC", pattern: new Array(16).fill(false) }, 
-            { name: "REGRET", pattern: new Array(16).fill(false) },
-            { name: "VOICE", pattern: new Array(16).fill(false) } // <--- NEW TRACK
+            { name: "REGRET", pattern: new Array(16).fill(false) }
         ];
+
         function initSequencer() {
             const grid = document.getElementById('sequencer-grid'); grid.innerHTML = "";
             tracks.forEach((track, t) => {
@@ -631,17 +669,30 @@ const tracks = [
             });
             document.getElementById('bpm-slider').oninput = function() { bpm = this.value; document.getElementById('bpm-val').innerText = bpm; };
         }
+
         function nextNote() { const secondsPerBeat = 60.0 / bpm; nextNoteTime += 0.25 * secondsPerBeat; currentStep++; if (currentStep === 16) currentStep = 0; }
         function scheduleNote(beatNumber, time) {
             requestAnimationFrame(() => { document.querySelectorAll('.seq-step').forEach(s => s.classList.remove('playing')); document.querySelectorAll(`.seq-step[data-step="${beatNumber}"]`).forEach(s => s.classList.add('playing')); });
             tracks.forEach((track, i) => { if (track.pattern[beatNumber]) playTrackSound(i, time); });
         }
         function scheduler() { while (nextNoteTime < audioCtx.currentTime + 0.1) { scheduleNote(currentStep, nextNoteTime); nextNote(); } timerID = setTimeout(scheduler, 25); }
+        
         function toggleSequencer() {
             const btn = document.getElementById('btn-play');
             if (seqPlaying) { seqPlaying = false; clearTimeout(timerID); btn.innerText = "[ PLAY ]"; } 
             else { if (!audioCtx) initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume(); seqPlaying = true; currentStep = 0; nextNoteTime = audioCtx.currentTime; scheduler(); btn.innerText = "[ STOP ]"; }
         }
+
+        // NEW: CLEAR FUNCTION
+        function clearPattern() {
+            tracks.forEach((track, t) => {
+                track.pattern = new Array(16).fill(false);
+                const row = document.querySelectorAll('.seq-row')[t];
+                // Reset visuals
+                Array.from(row.children).slice(1).forEach(step => step.className = "seq-step");
+            });
+        }
+
         function randomizePattern() {
             tracks.forEach((track, t) => {
                 track.pattern = track.pattern.map(() => Math.random() > 0.7);
@@ -649,82 +700,20 @@ const tracks = [
                 track.pattern.forEach((active, s) => { row.children[s+1].className = active ? "seq-step active" : "seq-step"; });
             });
         }
-        const glitchWords = ["NULL", "VOID", "SYS", "ROT", "ONE", "ZERO", "ERR", "DIE", "RUN", "X", "NOT", "NIL", "END"];
 
         function playTrackSound(trackIndex, time) {
-            // Standard Audio Setup
-            const osc = audioCtx.createOscillator(); 
-            const gain = audioCtx.createGain(); 
-            osc.connect(gain); 
-            gain.connect(audioCtx.destination);
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
             const vol = globalVol; 
             
-            // TRACK 0: HEARTBEAT (Kick)
-            if (trackIndex === 0) { 
-                osc.type = 'sine'; 
-                osc.frequency.setValueAtTime(150, time); 
-                osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5); 
-                gain.gain.setValueAtTime(vol * 0.8, time); 
-                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5); 
-                osc.start(time); osc.stop(time + 0.5); 
-            } 
-            // TRACK 1: STATIC (Snare/Hi-hat)
+            if (trackIndex === 0) { osc.type = 'sine'; osc.frequency.setValueAtTime(150, time); osc.frequency.exponentialRampToValueAtTime(0.01, time + 0.5); gain.gain.setValueAtTime(vol * 0.8, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5); osc.start(time); osc.stop(time + 0.5); } 
             else if (trackIndex === 1) { 
-                const bufferSize = audioCtx.sampleRate * 0.1; 
-                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); 
-                const data = buffer.getChannelData(0);
+                const bufferSize = audioCtx.sampleRate * 0.1; const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); const data = buffer.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                const noise = audioCtx.createBufferSource(); 
-                noise.buffer = buffer; 
-                const filter = audioCtx.createBiquadFilter(); 
-                filter.type = 'highpass'; 
-                filter.frequency.value = 1000;
-                noise.connect(filter); 
-                filter.connect(gain); 
-                gain.gain.setValueAtTime(vol * 0.3, time); 
-                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1); 
-                noise.start(time);
+                const noise = audioCtx.createBufferSource(); noise.buffer = buffer; const filter = audioCtx.createBiquadFilter(); filter.type = 'highpass'; filter.frequency.value = 1000;
+                noise.connect(filter); filter.connect(gain); gain.gain.setValueAtTime(vol * 0.3, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1); noise.start(time);
             } 
-            // TRACK 2: LOGIC (Square Bass)
-            else if (trackIndex === 2) { 
-                osc.type = 'square'; 
-                osc.frequency.setValueAtTime(800, time); 
-                osc.frequency.exponentialRampToValueAtTime(200, time + 0.05); 
-                gain.gain.setValueAtTime(vol * 0.1, time); 
-                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05); 
-                osc.start(time); osc.stop(time + 0.05); 
-            } 
-            // TRACK 3: REGRET (Detuned Saw)
-            else if (trackIndex === 3) { 
-                const notes = [220, 261.63, 311.13, 392, 440]; 
-                const freq = notes[Math.floor(Math.random() * notes.length)]; 
-                osc.type = 'sawtooth'; 
-                osc.frequency.setValueAtTime(freq, time); 
-                osc.detune.value = Math.random() * 20 - 10; 
-                gain.gain.setValueAtTime(0, time); 
-                gain.gain.linearRampToValueAtTime(vol * 0.2, time + 0.05); 
-                gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); 
-                osc.start(time); osc.stop(time + 0.4); 
-            }
-            // TRACK 4: VOICE (The Ghost)
-            else if (trackIndex === 4) {
-                // We use SpeechSynthesis. Note: This ignores 'time' scheduling 
-                // and fires immediately, causing a natural "lag" effect.
-                if ('speechSynthesis' in window) {
-                    const word = glitchWords[Math.floor(Math.random() * glitchWords.length)];
-                    const msg = new SpeechSynthesisUtterance(word);
-                    msg.volume = vol; 
-                    msg.rate = 2.0; // Speak fast to fit between beats
-                    msg.pitch = Math.random() * 1.5 + 0.5; // Random pitch glitch
-                    
-                    // Try to find the robot voice again
-                    const voices = window.speechSynthesis.getVoices();
-                    const roboVoice = voices.find(v => v.name.includes("Zira") || v.name.includes("Google US English"));
-                    if(roboVoice) msg.voice = roboVoice;
-                    
-                    window.speechSynthesis.speak(msg);
-                }
-            }
+            else if (trackIndex === 2) { osc.type = 'square'; osc.frequency.setValueAtTime(800, time); osc.frequency.exponentialRampToValueAtTime(200, time + 0.05); gain.gain.setValueAtTime(vol * 0.1, time); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.05); osc.start(time); osc.stop(time + 0.05); } 
+            else if (trackIndex === 3) { const notes = [220, 261.63, 311.13, 392, 440]; const freq = notes[Math.floor(Math.random() * notes.length)]; osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = Math.random() * 20 - 10; gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol * 0.2, time + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); osc.start(time); osc.stop(time + 0.4); }
         }
         setTimeout(initSequencer, 500);
         // --- SYNTHESIS ENGINE V2 ---
@@ -1135,6 +1124,7 @@ const tracks = [
     </script>
 </body>
 </html>
+
 
 
 
