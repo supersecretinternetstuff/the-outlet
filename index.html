@@ -263,7 +263,32 @@
             
             /* 10. INTERCEPT SLIDER */
             #freq-slider { width: 100% !important; margin-top: 10px; }
+            /* === SEQUENCER MOBILE PATCH === */
+            #sequencer-grid .seq-row {
+                display: flex !important;
+                flex-direction: row !important; /* Force horizontal layout */
+                align-items: center;
+                width: 100%;
+                margin-bottom: 2px;
+            }
+            
+            #sequencer-grid .seq-label {
+                width: 50px !important; /* Shrink label width */
+                font-size: 8px !important; /* Shrink text */
+                overflow: hidden;
+            }
+            
+            #sequencer-grid .seq-step {
+                flex: 1; /* Grow to fill space */
+                height: 15px !important;
+                min-width: 10px; /* Prevent shrinking to zero */
+                border: 1px solid #333;
+            }
+            
+            /* Adjust the BPM slider to fit better */
+            #bpm-slider { width: 80px !important; }
         }
+        
     </style>
 </head>
 <body>
@@ -1123,6 +1148,7 @@
     </script>
 </body>
 </html>
+
 
 
 
