@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>/// THE_OUTLET ///</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22black%22/><text y=%22.9em%22 font-size=%2290%22>👁️</text></svg>">
     <style>
         /* ============================ */
@@ -509,6 +510,20 @@
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
 
+// --- FFmpeg CONFIGURATION ---
+const { createFFmpeg, fetchFile } = FFmpeg;
+const ffmpeg = createFFmpeg({ log: true });
+let isFFmpegLoaded = false;
+
+async function loadFFmpeg() {
+    if (!ffmpeg.isLoaded()) {
+        document.getElementById('face-status').innerText = "LOADING CORE...";
+        await ffmpeg.load();
+        isFFmpegLoaded = true;
+        document.getElementById('face-status').innerText = "CORE ONLINE";
+    }
+}
+        
         // --- AUDIO ENGINE ---
         let audioCtx;
         let globalVol = 0.5;
@@ -1206,47 +1221,81 @@
             }
         }
 
-     function captureSubject() {
-            // Get the two visual layers
+     async function captureSubject() {
+            if (!isFFmpegLoaded) {
+                // If it's not loaded yet, try to load it first
+                await loadFFmpeg();
+                if (!isFFmpegLoaded) {
+                    alert("FFmpeg core failed to load. Try refreshing.");
+                    return;
+                }
+            }
+
+            const status = document.getElementById('face-status');
+            status.innerText = "CAPTURING...";
+
+            // 1. Get raw base image data (the highly pixelated feed)
             const mirrorCanvas = document.getElementById('mirror-canvas');
-            const noiseCanvas = document.getElementById('noise-canvas');
+            const baseDataURL = mirrorCanvas.toDataURL('image/png');
+            
+            // 2. Convert DataURL to a raw file format FFmpeg can read
+            status.innerText = "PROCESSING SIGNAL...";
+            const rawInput = await fetchFile(baseDataURL);
 
-            // 1. Create a temporary, final-resolution canvas (480x360)
-            const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = 480;
-            finalCanvas.height = 360;
-            const finalCtx = finalCanvas.getContext('2d');
-            
-            // CRITICAL FIX: Disable anti-aliasing to force blocky upscale
-            finalCtx.imageSmoothingEnabled = false; 
+            // 3. Write the input file to FFmpeg's memory filesystem
+            await ffmpeg.FS('writeFile', 'input.png', rawInput);
 
-            // 2. Draw the pixel-crunch feed (Upscaled from 128x96 to 480x360)
-            finalCtx.drawImage(mirrorCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
-            
-            // 3. Draw the current noise/grain layer over the top
-            finalCtx.drawImage(noiseCanvas, 0, 0); 
-            
-            // 4. Save the composite image
+            // 4. Execute FFmpeg Command (The Secret Sauce)
+            // This command applies the high-quality glitch and upscaling:
+            // -i input.png: Input file
+            // -vf scale=480:360: Forcing the upscale (4x original size)
+            // -vf "noise=alls=10:allf=t+z": Adds complex analog noise/grain and flicker
+            // -c:v libx264 -t 1: Encodes a 1-second H.264 video loop for ultimate corruption
+            try {
+                await ffmpeg.run(
+                    '-i', 'input.png', 
+                    '-pix_fmt', 'yuv420p',
+                    '-vf', 'scale=480:360,noise=alls=10:allf=t+z,pad=500:380:10:10:black', 
+                    '-c:v', 'libx264',
+                    '-preset', 'ultrafast',
+                    '-t', '1', // Create a short 1-second video loop
+                    'output.mp4'
+                );
+            } catch (e) {
+                console.error("FFMPEG EXECUTION FAILED:", e);
+                status.innerText = "PROCESSING ERROR";
+                return;
+            }
+
+            // 5. Read the final processed file from FFmpeg's memory
+            status.innerText = "DOWNLOAD READY";
+            const processedData = ffmpeg.FS('readFile', 'output.mp4');
+
+            // 6. Create Download Link for the MP4/Video File
+            const videoBlob = new Blob([processedData.buffer], { type: 'video/mp4' });
             const link = document.createElement('a');
-            link.download = 'EVIDENCE_' + Date.now() + '.png';
-            link.href = finalCanvas.toDataURL('image/png');
+            link.href = URL.createObjectURL(videoBlob);
+            link.download = 'EVIDENCE_' + Date.now() + '.mp4';
             link.click();
 
+            // 7. Cleanup and Feedback
             playSound('crunch');
-            finalCanvas.remove(); 
+            status.innerText = "PROCESSING COMPLETE";
+            setTimeout(() => status.innerText = "CORE ONLINE", 3000); 
         }
         function closeOcular() {
             if(videoStream) toggleCamera();
             document.getElementById('ocular-window').style.display = 'none';
         }
-
-        function openOcular() {
+function openOcular() {
             closeAll();
             document.getElementById('ocular-window').style.display = 'flex';
+            loadFFmpeg(); // Added: Starts loading the core as soon as the window is opened
         }
     </script>
 </body>
 </html>
+
 
 
 
