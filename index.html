@@ -6,7 +6,7 @@
     <title>/// THE_OUTLET ///</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22black%22/><text y=%22.9em%22 font-size=%2290%22>👁️</text></svg>">
-<style>
+    <style>
         /* ============================ */
         /* /// THE_OUTLET // CORE CSS /// */
         /* ============================ */
@@ -140,7 +140,7 @@
             cursor: ns-resize; box-shadow: 0 0 5px var(--main-color);
         }
 
-        /* --- COMPONENT: NEURAL SEQUENCER (FIXED) --- */
+        /* --- COMPONENT: NEURAL SEQUENCER V2 (STACKED) --- */
         #sequencer-grid { 
             display: flex; 
             flex-direction: column; 
@@ -165,13 +165,13 @@
             flex-shrink: 0;
         }
         .seq-step { 
-           flex: 1;
-    height: 20px !important; /* Taller squares */
-    min-width: 15px !important; /* Never collapse */
-    background: #111;
-    border: 1px solid #222;
-    margin-right: 1px;
-    cursor: pointer;
+            flex: 1; 
+            height: 100%; 
+            background: #111; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            min-width: 15px !important; /* CRITICAL FIX: Stops them from vanishing */
+            margin-right: 1px;
         }
         .seq-step.active { 
             background: var(--main-color) !important; 
@@ -204,6 +204,17 @@
         .tarot-card { flex: 1; height: 140px; border: 2px dashed var(--main-color); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: help; transition: all 0.3s; background: #050505; overflow: hidden; }
         .tarot-card:hover { background: #111; border-style: solid; }
         .card-art { font-size: 10px; line-height: 10px; font-weight: bold; }
+        
+        /* --- OCULAR FX --- */
+        .scan-line {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 5px;
+            background: rgba(0, 255, 0, 0.3);
+            opacity: 0.5;
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
 
         /* ============================ */
         /* /// MOBILE OVERRIDE (V3) /// */
@@ -242,11 +253,6 @@
             #sequencer-grid .seq-step { flex: 1; height: 25px !important; min-width: 10px; border: 1px solid #333; }
             #bpm-slider { width: 80px !important; }
         }
-    /* SAFETY PATCH FOR GRID */
-.seq-step {
-    min-width: 15px !important; /* Forces the box to exist */
-    flex: 1;
-}
     </style>
 </head>
 <body>
@@ -316,27 +322,21 @@
         </div>
     </div>
 
-<div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 320px; height: auto; display: none;">
+    <div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 320px; height: auto; display: none;">
         <div class="title-bar" ondblclick="toggleMinimize(this)">
             <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> OCULAR.exe</span>
             <div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="closeOcular()">X</button></div>
         </div>
         <div class="window-content" style="padding: 0; background: #000; display: flex; flex-direction: column;">
-            
             <div style="position: relative; width: 100%; height: 240px; overflow: hidden; border-bottom: 1px solid var(--main-color);">
-                
                 <video id="webcam-feed" autoplay playsinline muted style="display: none;"></video>
-                
                 <canvas id="mirror-canvas" width="128" height="96" style="width: 100%; height: 100%; image-rendering: pixelated; opacity: 0.9;"></canvas>
-                
                 <div class="scan-line"></div>
                 <div style="position: absolute; top: 5px; left: 5px; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px;">REC <span class="flicker" style="color:red">●</span></div>
                 <div id="face-status" style="position: absolute; bottom: 5px; right: 5px; font-size: 10px; text-align: right; text-shadow: 1px 1px 0 #000;">NO SIGNAL</div>
-                
                 <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 1px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
                 <div style="position: absolute; top: 50%; left: 50%; width: 1px; height: 20px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
             </div>
-
             <div style="padding: 10px; display: flex; gap: 5px;">
                 <button id="btn-camera" onclick="toggleCamera()" style="flex: 1; background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px; font-family: monospace;">[ ACTIVATE SENSOR ]</button>
                 <button id="btn-capture" onclick="captureSubject()" style="display: none; flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px; font-family: monospace;">[ CAPTURE ]</button>
@@ -394,64 +394,31 @@
         </div>
     </div>
 
-<div class="window" style="top: 350px; left: 100px; width: 460px; height: auto;">
+    <div class="window" style="top: 350px; left: 100px; width: 460px; height: auto;">
         <div class="title-bar" ondblclick="toggleMinimize(this)">
             <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> NEURAL_SEQUENCER.exe</span>
             <div class="controls"><button onclick="toggleMinimize(this)">_</button><button>X</button></div>
         </div>
         
         <div class="window-content" style="display: none; flex-direction: column; gap: 15px;">
-            
             <div id="sequencer-grid" style="display: flex; flex-direction: column; gap: 4px; width: 100%; background: #000; border: 1px solid #333; padding: 5px;">
                 </div>
-            
             <div style="display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px dashed var(--main-color); padding-top: 10px;">
-                
                 <div style="text-align: center;">
                     <label style="font-size: 10px; display: block; margin-bottom: 5px; color: gray;">TEMPO <span id="bpm-val" style="color: var(--main-color);">120</span></label>
                     <input id="bpm-slider" type="range" min="60" max="200" value="120" style="width: 100px; accent-color: var(--main-color); cursor: pointer;">
                 </div>
-
                 <div style="display: flex; gap: 5px; align-items: center;">
                     <button onclick="clearPattern()" style="background: #000; color: var(--alert-color); border: 1px solid var(--alert-color); padding: 8px 10px; cursor: pointer; font-family: monospace; font-size: 10px;">[ CLEAR ]</button>
                     <button onclick="toggleSequencer()" id="btn-play" style="background: var(--main-color); color: #000; border: none; font-weight: bold; padding: 8px 15px; cursor: pointer; font-family: monospace; font-size: 11px;">[ PLAY ]</button>
                 </div>
-
             </div>
-
             <button onclick="randomizePattern()" style="width: 100%; background: #000; color: var(--main-color); border: 1px solid var(--main-color); padding: 8px; cursor: pointer; font-family: monospace; font-weight: bold; margin-top: 5px;">
                 >>> INITIATE HALLUCINATION <<<
             </button>
         </div>
     </div>
 
-<div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 320px; height: auto;">
-        <div class="title-bar" ondblclick="toggleMinimize(this)">
-            <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> OCULAR.exe</span>
-            <div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="closeOcular()">X</button></div>
-        </div>
-        <div class="window-content" style="padding: 0; background: #000; display: flex; flex-direction: column;">
-            
-            <div style="position: relative; width: 100%; height: 240px; overflow: hidden; border-bottom: 1px solid var(--main-color);">
-                <video id="webcam-feed" autoplay playsinline style="display: none;"></video>
-                <canvas id="mirror-canvas" width="128" height="96" style="width: 100%; height: 100%; image-rendering: pixelated; opacity: 0.8;"></canvas>
-                
-                <div class="scan-line"></div>
-                <div style="position: absolute; top: 5px; left: 5px; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px;">REC <span class="flicker" style="color:red">●</span></div>
-                <div id="face-status" style="position: absolute; bottom: 5px; right: 5px; font-size: 10px; text-align: right; text-shadow: 1px 1px 0 #000;">NO SIGNAL</div>
-                
-                <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 1px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
-                <div style="position: absolute; top: 50%; left: 50%; width: 1px; height: 20px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
-            </div>
-
-            <div style="padding: 10px; display: flex; gap: 5px;">
-                <button id="btn-camera" onclick="toggleCamera()" style="flex: 1; background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px;">[ ACTIVATE SENSOR ]</button>
-                <button id="btn-capture" onclick="captureSubject()" style="display: none; flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px;">[ CAPTURE ]</button>
-            </div>
-        </div>
-    </div>
-
-                    
     <div class="window" style="top: 400px; left: 50px; width: 450px; height: 32px;">
         <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> SYNTHESIS_ENGINE_V2.exe</span><div class="controls"><button onclick="minimize(this)">_</button><button>X</button></div></div>
         <div class="window-content" style="text-align: center; display: none;">
@@ -495,16 +462,16 @@
                 <span id="truth-timestamp">LOADING...</span>
             </div>
             <p>ERROR 404: HUMAN AUTHOR NOT FOUND.</p>
-            <div class="meta-footer" style="text-align: center; margin-top: 20px;">
-    <span style="font-size: 15px; display: block; margin-bottom: 5px; opacity: 0.8;">NEXT DATA CORRUPTION IN:</span>
-    <span id="truth-countdown" class="hardcore-timer flicker">00:00:00:000</span>
-</div>
+            <div class="meta-footer">
+                <span style="font-size: 15px; display: block; margin-bottom: 5px; opacity: 0.8;">NEXT DATA CORRUPTION IN:</span>
+                <span id="truth-countdown" class="hardcore-timer flicker">00:00:00:000</span>
+            </div>
         </div>
     </div>
 
     <div id="chat" class="overlay"><button class="close-btn" onclick="closeAll()">[X]</button><div class="txt-doc"><h1>IRC LOG</h1><p>&lt;DarkRender&gt; someone else is in the server.<br>&lt;DarkRender&gt; <span style="color:red">THE_VIEWER</span> has joined.</p></div></div>
 
-<div id="broadcast" class="overlay">
+    <div id="broadcast" class="overlay">
         <button class="close-btn" onclick="closeAll()">[X]</button>
         <div class="txt-doc" style="max-width: 600px; border: 1px solid var(--main-color); padding: 0;">
             <div style="background: var(--main-color); color: black; padding: 10px; font-weight: bold; display: flex; justify-content: space-between;">
@@ -547,7 +514,6 @@
         }
 
         function playSound(type) {
-            // NO CLICK/HOVER SOUNDS. ONLY FUNCTIONAL.
             if (!audioCtx) initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination);
             const now = audioCtx.currentTime; const vol = globalVol; 
@@ -617,29 +583,25 @@
                 win.style.display = 'none';
             }
         }
-        function openArchive() { toggleArchiveWindow(); } // Alias
+        function openArchive() { toggleArchiveWindow(); } 
 
-     // --- COUNTDOWN LOGIC (HARDCORE MODE) ---
+        // --- COUNTDOWN LOGIC ---
         function updateCountdown() {
             const now = new Date();
             const nextMidnight = new Date(now);
             nextMidnight.setUTCHours(24,0,0,0);
             
             const diff = nextMidnight - now;
-            
-            // Calculate time parts
             const h = Math.floor(diff / (1000 * 60 * 60));
             const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const s = Math.floor((diff % (1000 * 60)) / 1000);
-            const ms = Math.floor(diff % 1000); // The racing numbers
+            const ms = Math.floor(diff % 1000); 
 
-            // Format with leading zeros
             const hStr = h.toString().padStart(2,'0');
             const mStr = m.toString().padStart(2,'0');
             const sStr = s.toString().padStart(2,'0');
             const msStr = ms.toString().padStart(3,'0');
 
-            // Inject into the hardcore container
             document.getElementById('truth-countdown').innerText = `${hStr}:${mStr}:${sStr}:${msStr}`;
         }
 
@@ -653,7 +615,6 @@
             }
             if (state.pet_hunger !== undefined) { hunger = state.pet_hunger; updatePetFace(); }
         }
-        initHiveMind();
 
         // --- WINDOW TOGGLE ---
         function toggleMinimize(el) {
@@ -685,20 +646,18 @@
             lastX=mouseX; lastY=mouseY;
         }, 100);
 
-        // --- MOOD CONTROLLER (NETWORKED) ---
+        // --- MOOD CONTROLLER ---
         async function setMood(mood) {
             playMoodSound(mood);
-            // Optimistic Update
             const root = document.documentElement;
             if(mood === 'green') { root.style.setProperty('--main-color', '#00ff00'); root.style.setProperty('--border-color', '#005500'); }
             if(mood === 'red') { root.style.setProperty('--main-color', '#ff3333'); root.style.setProperty('--border-color', '#550000'); }
             if(mood === 'blue') { root.style.setProperty('--main-color', '#5555ff'); root.style.setProperty('--border-color', '#000055'); }
             if(mood === 'white') { root.style.setProperty('--main-color', '#ffffff'); root.style.setProperty('--border-color', '#555555'); }
-            // Network
             await client.from('global_state').update({ current_mood: mood }).eq('id', GLOBAL_ID);
         }
 
-        // --- PET DAEMON (NETWORKED) ---
+        // --- PET DAEMON ---
         let hunger = 100;
         setInterval(() => { hunger--; updatePetFace(); }, 1000); 
         function updatePetFace() {
@@ -711,10 +670,9 @@
         }
         async function feedPet() { hunger = Math.min(100, hunger + 20); playSound('crunch'); updatePetFace(); await client.from('global_state').update({ pet_hunger: hunger }).eq('id', GLOBAL_ID); }
 
-       // --- NEURAL SEQUENCER V1 ---
+        // --- NEURAL SEQUENCER V2 ---
         let seqPlaying = false; let currentStep = 0; let nextNoteTime = 0; let timerID = null; let bpm = 120;
         
-        // UPDATED TRACKS: Removed VOICE
         const tracks = [
             { name: "HEARTBEAT", pattern: new Array(16).fill(false) }, 
             { name: "STATIC", pattern: new Array(16).fill(false) }, 
@@ -750,12 +708,10 @@
             else { if (!audioCtx) initAudio(); if (audioCtx.state === 'suspended') audioCtx.resume(); seqPlaying = true; currentStep = 0; nextNoteTime = audioCtx.currentTime; scheduler(); btn.innerText = "[ STOP ]"; }
         }
 
-        // NEW: CLEAR FUNCTION
         function clearPattern() {
             tracks.forEach((track, t) => {
                 track.pattern = new Array(16).fill(false);
                 const row = document.querySelectorAll('.seq-row')[t];
-                // Reset visuals
                 Array.from(row.children).slice(1).forEach(step => step.className = "seq-step");
             });
         }
@@ -783,38 +739,24 @@
             else if (trackIndex === 3) { const notes = [220, 261.63, 311.13, 392, 440]; const freq = notes[Math.floor(Math.random() * notes.length)]; osc.type = 'sawtooth'; osc.frequency.setValueAtTime(freq, time); osc.detune.value = Math.random() * 20 - 10; gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(vol * 0.2, time + 0.05); gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4); osc.start(time); osc.stop(time + 0.4); }
         }
         setTimeout(initSequencer, 500);
+
         // --- SYNTHESIS ENGINE V2 ---
         let synthRunning = false; let synthInterval = null; let analyser = null; let dataArray = null;
         let masterGain = null; let distortionNode = null; let reverbNode = null;
-        // Default values
-        let pEntropy = 20; 
-        let pPressure = 0; 
-        let pHollow = 50;
+        let pEntropy = 20; let pPressure = 0; let pHollow = 50;
 
-        // BULLETPROOF LISTENER SETUP
-        // This waits for the page to be 100% ready before hooking up the wires
         window.addEventListener('DOMContentLoaded', () => {
-            console.log(">>> INITIALIZING KNOBS...");
-            
             const params = ['entropy', 'pressure', 'hollow'];
-            
             params.forEach(id => {
                 const slider = document.getElementById('param-' + id);
                 const label = document.getElementById('val-' + id);
-                
                 if (slider && label) {
-                    // Update the label immediately when dragging
                     slider.addEventListener('input', (e) => {
                         label.innerText = e.target.value + "%";
-                        
-                        // Update the internal variable too
                         if(id === 'entropy') pEntropy = parseInt(e.target.value);
                         if(id === 'pressure') pPressure = parseInt(e.target.value);
                         if(id === 'hollow') pHollow = parseInt(e.target.value);
                     });
-                    console.log(">>> KNOB CONNECTED: " + id);
-                } else {
-                    console.error(">>> FAILED TO FIND KNOB: " + id);
                 }
             });
         });
@@ -847,25 +789,18 @@
 
         function pulse() {
             const now = audioCtx.currentTime;
-            
-            // Read values directly from DOM to be safe
             const sliderE = document.getElementById('param-entropy');
             const sliderP = document.getElementById('param-pressure');
             const sliderH = document.getElementById('param-hollow');
-
             if(sliderE) pEntropy = parseInt(sliderE.value);
             if(sliderP) pPressure = parseInt(sliderP.value);
             if(sliderH) pHollow = parseInt(sliderH.value);
-
-            // Update labels (redundant but safe)
             document.getElementById('val-entropy').innerText = pEntropy + "%"; 
             document.getElementById('val-pressure').innerText = pPressure + "%"; 
             document.getElementById('val-hollow').innerText = pHollow + "%";
-            
             distortionNode.curve = makeDistortionCurve(pPressure * 2);
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(distortionNode);
             const vol = globalVol; 
-            
             if (Math.random() * 100 > pEntropy) {
                 osc.type = pPressure > 50 ? 'sawtooth' : 'sine'; const freq = pPressure > 80 ? 50 + Math.random()*50 : 60;
                 osc.frequency.setValueAtTime(freq, now); osc.frequency.exponentialRampToValueAtTime(10, now + 0.5);
@@ -895,7 +830,6 @@
         function makeDistortionCurve(amount) { const k = typeof amount === 'number' ? amount : 50; const n_samples = 44100; const curve = new Float32Array(n_samples); const deg = Math.PI / 180; for (let i = 0; i < n_samples; ++i ) { const x = i * 2 / n_samples - 1; curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) ); } return curve; }
         function impulseResponse(duration, decay, reverse) { const sampleRate = audioCtx.sampleRate; const length = sampleRate * duration; const impulse = audioCtx.createBuffer(2, length, sampleRate); const left = impulse.getChannelData(0); const right = impulse.getChannelData(1); for (let i = 0; i < length; i++){ const n = reverse ? length - i : i; left[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); right[i] = (Math.random() * 2 - 1) * Math.pow(1 - n / length, decay); } return impulse; }
 
-        
         // --- ORACLE ---
         let pendingCard3 = null;
         const tarotDeck = [
@@ -1032,7 +966,6 @@
         (function() { let z = 100; document.querySelectorAll('.window').forEach(w => { const bar = w.querySelector('.title-bar'); bar.onmousedown = (e) => { e.preventDefault(); z++; w.style.zIndex = z; let x = e.clientX, y = e.clientY; document.onmousemove = (e) => { e.preventDefault(); w.style.top = (w.offsetTop - (y - e.clientY)) + "px"; w.style.left = (w.offsetLeft - (x - e.clientX)) + "px"; x = e.clientX; y = e.clientY; }; document.onmouseup = () => document.onmousemove = null; }; }); })();
         
         // --- LONG TERM MEMORY ---
-        // (Replaced by Hive Mind, but kept for local backup)
         function saveState() {
             const state = { hunger: hunger, mood: getComputedStyle(document.documentElement).getPropertyValue('--main-color').trim(), borderColor: getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim(), score: utilityScore, memoriesFound: document.getElementById('memory-log').innerHTML };
             localStorage.setItem('THE_OUTLET_STATE', JSON.stringify(state));
@@ -1040,41 +973,25 @@
         setInterval(saveState, 2000); 
 
         // --- SCREAM ENGINE (CHAT + ROT) ---
-        let screamInterval = null; // To handle the live decay loop
+        let screamInterval = null; 
         let totalScreams = 0;
 
         async function initScream() {
             const log = document.getElementById('scream-log');
-            
-            // 1. Fetch initial screams (Last 50)
-            const { data, error } = await client
-                .from('screams')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(50);
-
+            const { data, error } = await client.from('screams').select('*').order('created_at', { ascending: false }).limit(50);
             if (data) {
                 log.innerHTML = "";
-                // Reverse so newest is at bottom
                 data.reverse().forEach(msg => appendScream(msg));
                 scrollToBottom();
-                
-                // Update Count
                 totalScreams = data.length;
                 updateVoiceCount();
             }
-
-            // 2. Listen for new screams
-            client.channel('public:screams')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'screams' }, payload => {
+            client.channel('public:screams').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'screams' }, payload => {
                     appendScream(payload.new);
                     scrollToBottom();
                     totalScreams++;
                     updateVoiceCount();
-                })
-                .subscribe();
-
-            // 3. START THE ROT LOOP (Updates every second)
+                }).subscribe();
             if (screamInterval) clearInterval(screamInterval);
             screamInterval = setInterval(updateRot, 1000);
         }
@@ -1086,38 +1003,27 @@
         function appendScream(msg) {
             const log = document.getElementById('scream-log');
             const div = document.createElement('div');
-            div.className = "scream-msg"; // Class for easy selection
-            div.dataset.created = msg.created_at; // Store time for live decay calculation
-            div.dataset.content = msg.content;    // Store original text
-            
-            div.style.marginBottom = "8px";
-            div.style.borderBottom = "1px dashed #333";
-            div.style.paddingBottom = "4px";
-            
-            // Initial Render
+            div.className = "scream-msg"; 
+            div.dataset.created = msg.created_at; 
+            div.dataset.content = msg.content;    
+            div.style.marginBottom = "8px"; div.style.borderBottom = "1px dashed #333"; div.style.paddingBottom = "4px";
             const { html, opacity } = calculateRot(msg.content, msg.created_at);
             div.style.opacity = opacity;
             div.innerHTML = html;
-            
             log.appendChild(div);
         }
 
-     // Called every second to destroy text live
         function updateRot() {
             const messages = document.querySelectorAll('.scream-msg');
             messages.forEach(div => {
                 const content = div.dataset.content;
                 const created = div.dataset.created;
                 const { html, opacity } = calculateRot(content, created);
-                
-                // THE REAPER CHECK
                 if (opacity <= 0.05) {
-                    // It is invisible. Kill it.
                     div.remove();
-                    totalScreams--; // Lower the voice count
+                    totalScreams--; 
                     updateVoiceCount();
                 } else {
-                    // It is still dying. Update it.
                     div.innerHTML = html;
                     div.style.opacity = opacity;
                 }
@@ -1128,30 +1034,17 @@
             const now = new Date();
             const created = new Date(createdAt);
             const ageMins = (now - created) / 1000 / 60;
-
-            // --- HYPER DECAY RATE (10 SECONDS) ---
-            // 6.0 multiplier means:
-            // 0.16 mins (10 seconds) * 6.0 = ~1.0 (100% Rot)
             const rotFactor = Math.min(1, ageMins * 6.0); 
-            
             const rottedText = rotText(content, rotFactor);
-            
-            // Fade out opacity slightly slower (15 seconds) so you see the blocks die
             const opacity = Math.max(0.05, 1 - (ageMins * 4.0)); 
-            
             const timeStr = created.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-            
-            return {
-                html: `<span style="color:#444">[${timeStr}]</span> ${rottedText}`,
-                opacity: opacity
-            };
+            return { html: `<span style="color:#444">[${timeStr}]</span> ${rottedText}`, opacity: opacity };
         }
 
         function rotText(text, severity) {
             if (severity <= 0) return text;
             return text.split('').map(char => {
                 if (char === ' ') return ' ';
-                // Increased glitch chance
                 return Math.random() < severity ? (Math.random() > 0.5 ? '_' : '█') : char;
             }).join('');
         }
@@ -1160,16 +1053,9 @@
             const input = document.getElementById('scream-input');
             const text = input.value.trim();
             if (!text) return;
-
-            input.value = ""; // Clear UI
-            
+            input.value = ""; 
             const { error } = await client.from('screams').insert({ content: text });
-            if (error) {
-                console.error(error);
-                alert("THE VOID REJECTED YOUR SCREAM.");
-            } else {
-                playSound('crunch');
-            }
+            if (error) { console.error(error); alert("THE VOID REJECTED YOUR SCREAM."); } else { playSound('crunch'); }
         }
 
         function scrollToBottom() {
@@ -1180,16 +1066,14 @@
         const originalOpenOverlay = openOverlay;
         openOverlay = function(id) {
             originalOpenOverlay(id);
-            if (id === 'broadcast') {
-                initScream();
-            }
+            if (id === 'broadcast') { initScream(); }
         }
         
         document.getElementById('scream-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') postScream();
         });
 
-      // --- OCULAR SYSTEM (WEBCAM) ---
+        // --- OCULAR SYSTEM (WEBCAM) ---
         let videoStream = null;
         let paintInterval = null;
 
@@ -1219,10 +1103,9 @@
                 // START UP
                 try {
                     status.innerText = "INITIALIZING...";
-                    // Request camera
                     videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                     video.srcObject = videoStream;
-                    video.play(); // Force play for Macs
+                    video.play(); 
 
                     btn.innerText = "[ TERMINATE LINK ]";
                     btn.style.background = "var(--alert-color)";
@@ -1230,7 +1113,6 @@
                     if(capBtn) capBtn.style.display = "block";
                     status.innerText = "DETECTING BIOMETRICS...";
 
-                    // Start the render loop
                     paintInterval = setInterval(paintFrame, 100); 
                 } catch (err) {
                     console.error("CAMERA ERROR:", err);
@@ -1244,42 +1126,23 @@
             const video = document.getElementById('webcam-feed');
             const canvas = document.getElementById('mirror-canvas');
             const ctx = canvas.getContext('2d');
-            
-            // Only draw if video is actually running
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 const w = canvas.width;
                 const h = canvas.height;
-
-                // 1. Draw raw frame downscaled
                 ctx.drawImage(video, 0, 0, w, h);
-                
-                // 2. GET RAW PIXEL DATA (The Surgery)
                 let frame = ctx.getImageData(0, 0, w, h);
                 let data = frame.data; 
-
-                // Loop through pixels
                 for (let i = 0; i < data.length; i += 4) {
-                    let r = data[i];
-                    let g = data[i + 1];
-                    let b = data[i + 2];
-
+                    let r = data[i]; let g = data[i + 1]; let b = data[i + 2];
                     let brightness = (r + g + b) / 3;
-                    let threshold = 90; // The Crunch Level
-
-                    if (brightness < threshold) {
-                        // CRUSH TO BLACK
-                        data[i] = 0; data[i + 1] = 15; data[i + 2] = 0;
-                    } else {
-                        // BLOW OUT TO GREEN
+                    let threshold = 90; 
+                    if (brightness < threshold) { data[i] = 0; data[i + 1] = 15; data[i + 2] = 0; } 
+                    else { 
                         let noise = (Math.random() - 0.5) * 60;
-                        data[i] = 40 + noise; 
-                        data[i + 1] = 255; 
-                        data[i + 2] = 40 + noise;
+                        data[i] = 40 + noise; data[i + 1] = 255; data[i + 2] = 40 + noise;
                     }
                 }
                 ctx.putImageData(frame, 0, 0);
-                
-                // Random text flicker
                 if(Math.random() > 0.95) {
                      const labels = ["ANALYZING...", "SIGNAL UNSTABLE", "SUBJECT: UNKNOWN", "DATA CORRUPTION"];
                      document.getElementById('face-status').innerText = labels[Math.floor(Math.random()*labels.length)];
@@ -1308,28 +1171,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
