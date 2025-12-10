@@ -508,12 +508,13 @@
             corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.7/dist/ffmpeg-core.js", 
         }); 
         let isFFmpegLoaded = false;
-        function loadFFmpegScript() {
+       function loadFFmpegScript() {
             if (isFFmpegScriptLoaded) return;
             isFFmpegScriptLoaded = true;
             
             const script = document.createElement('script');
-            script.src = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js";
+            // Using a current version (0.12.15 is the top available version for the package)
+            script.src = "https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/ffmpeg.min.js";
             document.body.appendChild(script);
 
             script.onload = () => {
@@ -521,6 +522,9 @@
                 if (window.FFmpeg) {
                     createFFmpeg = window.FFmpeg.createFFmpeg;
                     fetchFile = window.FFmpeg.fetchFile;
+                    
+                    // NOTE: Removed corePath setting. The library should now automatically 
+                    // look for the correct core files based on its own version (0.12.15).
                     ffmpeg = createFFmpeg({ log: false }); 
                 }
             };
@@ -1324,4 +1328,5 @@
     </script>
 </body>
 </html>
+
 
