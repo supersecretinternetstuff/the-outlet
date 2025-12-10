@@ -502,17 +502,30 @@
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
 
-        // --- FFmpeg CONFIGURATION (Global objects are now available here) ---
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        
-        // FINAL FIX: We set the corePath to the CDN version that matches the library (0.12.15)
-        const ffmpeg = createFFmpeg({ 
-            log: false,
-            corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.15/dist/ffmpeg-core.js", 
-        }); 
+        // --- FFmpeg CONFIGURATION (Delayed Initialization) ---
+        // CRITICAL FIX: Global objects are now declared here, but assigned later.
+        let createFFmpeg, fetchFile, ffmpeg;
         let isFFmpegLoaded = false;
         
+        // This is a safe guard. It runs immediately and attaches the objects to the global scope.
+        // It should ONLY run if the external script is available.
+        if (typeof FFmpeg !== 'undefined') {
+            createFFmpeg = FFmpeg.createFFmpeg;
+            fetchFile = FFmpeg.fetchFile;
+            // The object creation MUST happen here where it is available.
+            ffmpeg = createFFmpeg({ 
+                log: false,
+                // CRITICAL FIX: Set corePath to the matching CDN version.
+                corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.15/dist/ffmpeg-core.js", 
+            }); 
+        }
+
         async function loadFFmpeg() {
+            if (!ffmpeg) {
+                 document.getElementById('face-status').innerText = "CORE INIT ERROR. Refresh.";
+                 return;
+            }
+
             if (!ffmpeg.isLoaded()) {
                 document.getElementById('face-status').innerText = "LOADING CORE...";
                 try {
@@ -522,7 +535,7 @@
                 } catch (e) {
                     console.error("FFmpeg Load Error:", e);
                     document.getElementById('face-status').innerText = "CORE LOAD FAILED";
-                    alert("FFmpeg core failed to load. (Check browser console for details).");
+                    alert("FFmpeg core failed to load. The required WebAssembly files may be blocked by your network.");
                 }
             }
         }
@@ -1227,10 +1240,14 @@
         }
 
         async function captureSubject() {
+            if (!ffmpeg) {
+                alert("FFmpeg core failed to load. Please try refreshing.");
+                return;
+            }
             if (!isFFmpegLoaded) {
                 await loadFFmpeg();
                 if (!isFFmpegLoaded) {
-                    alert("FFmpeg core failed to load. Try refreshing.");
+                    alert("FFmpeg core failed to load. Check console for network errors.");
                     return;
                 }
             }
@@ -1240,12 +1257,11 @@
 
             // 1. Get raw base image data (the highly pixelated feed)
             const mirrorCanvas = document.getElementById('mirror-canvas');
-            // CRITICAL: We need a large, sharp PNG to feed FFmpeg
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = 480;
             tempCanvas.height = 360;
             const tempCtx = tempCanvas.getContext('2d');
-            tempCtx.imageSmoothingEnabled = false; // Force sharp pixels on capture canvas
+            tempCtx.imageSmoothingEnabled = false; 
             tempCtx.drawImage(mirrorCanvas, 0, 0, 480, 360);
             
             const baseDataURL = tempCanvas.toDataURL('image/png');
