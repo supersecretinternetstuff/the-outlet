@@ -174,68 +174,95 @@
     box-shadow: 0 0 10px var(--alert-color);
     text-shadow: 2px 0px 0px black, -2px 0px 0px black;
 }
-        /* === MOBILE OVERRIDE (THE FEED) === */
+   /* === MOBILE OVERRIDE (THE FEED V2) === */
         @media (max-width: 768px) {
-            /* 1. Stop the dragging metaphor */
+            /* 1. THE BODY (Allow Scrolling) */
             body {
-                overflow-y: auto; /* Allow scrolling down the feed */
-                height: auto;     /* Let the body grow */
-                padding-bottom: 50px;
-                background-size: 100% 2px, 3px 100%; /* Keep grid but adjust */
+                overflow-y: auto !important;
+                height: auto !important;
+                padding-bottom: 80px; /* Space for scrolling */
+                background-attachment: fixed; /* Keep background static while scrolling */
             }
 
-            /* 2. Stack the windows */
+            /* 2. THE WINDOWS (Force Stack) */
             .window {
-                position: relative !important; /* Force them into the flow */
+                position: relative !important;
                 top: auto !important;
                 left: auto !important;
-                width: 90% !important;
-                margin: 20px auto !important; /* Center them */
+                right: auto !important; /* CRITICAL FIX for Amygdala/Intercept */
+                bottom: auto !important;
+                width: 94% !important;  /* Fill width with small margins */
+                margin: 15px auto !important;
                 transform: none !important;
-                height: auto !important; /* Let them expand */
-                box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+                height: auto !important;
+                box-shadow: none !important; 
+                border-width: 1px !important;
             }
 
-            /* 3. Adjust the content */
+            /* 3. WINDOW CONTENT (Fill Space) */
             .window-content {
-                display: block !important; /* Force content visible */
+                display: flex !important;
+                flex-direction: column !important;
+                width: 100% !important;
+                box-sizing: border-box; /* Prevent padding from breaking width */
             }
 
-            /* 4. Hide drag controls (They don't work here) */
-            .toggle-icon, .controls {
-                display: none; 
+            /* 4. MEMORY DEFRAG FIX */
+            #memory-grid {
+                width: 100% !important; /* Force grid to fill window */
+                height: auto !important;
+                grid-template-columns: repeat(10, 1fr) !important; /* Maintain grid ratio */
+                margin-bottom: 10px;
             }
-            .title-bar {
-                cursor: default;
-                justify-content: center; /* Center the title */
+            #memory-log {
+                border-left: none !important;
+                border-top: 1px solid var(--main-color);
+                width: 100% !important;
+                height: 150px !important;
+                padding-left: 0 !important;
+                padding-top: 5px;
+            }
+            /* Make the flex container inside Memory Defrag stack vertically */
+            .window-content[style*="display: flex"] { 
+                 flex-direction: column !important;
             }
 
-            /* 5. Fix the Overlays */
-            .overlay {
-                padding: 10px;
-            }
-            .txt-doc {
-                width: 100%;
-                font-size: 11px; /* Readable on small screens */
+            /* 5. CANVAS SCALING (Game, Scope, Rorschach) */
+            canvas {
+                width: 100% !important;
+                height: auto !important;
+                max-width: 100%;
             }
 
-            /* 6. Adjust Specific Tools */
-            #hud-observer, #hud-theme, #hud-pet {
-                position: relative;
-                width: 90%;
-                margin: 10px auto;
-                bottom: auto; right: auto; left: auto; top: auto;
+            /* 6. HIDE DESKTOP CONTROLS */
+            .toggle-icon, .controls { display: none !important; }
+            .title-bar { 
+                cursor: default; 
+                justify-content: center; 
+                background: var(--main-color); 
+                color: black;
             }
+
+            /* 7. HUD ELEMENTS (Stack at top) */
+            .hud-panel {
+                position: relative !important;
+                top: auto !important;
+                bottom: auto !important;
+                left: auto !important;
+                right: auto !important;
+                width: 94% !important;
+                margin: 5px auto !important;
+            }
+
+            /* 8. OVERLAYS (Full Screen) */
+            .overlay { padding: 20px 10px; }
+            .txt-doc { width: 100%; font-size: 12px; }
             
-            /* Hide the visualizers that might be too heavy/small */
-            #scope-canvas { width: 100%; }
+            /* 9. AMYGDALA PADS (Bigger for thumbs) */
+            .amygdala-pad { height: 80px !important; font-size: 16px !important; }
             
-            /* Make the Tarot cards stack horizontally but smaller */
-            .tarot-card { height: 100px; }
-            
-            /* Hardcore Timer Adjustment */
-            .meta-footer { font-size: 10px; }
-            .hardcore-timer { font-size: 14px; letter-spacing: 1px; }
+            /* 10. INTERCEPT SLIDER */
+            #freq-slider { width: 100% !important; margin-top: 10px; }
         }
     </style>
 </head>
@@ -1096,6 +1123,7 @@
     </script>
 </body>
 </html>
+
 
 
 
