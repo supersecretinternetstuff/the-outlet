@@ -1122,27 +1122,54 @@
             }
         }
 
-        function paintFrame() {
+      function paintFrame() {
             const video = document.getElementById('webcam-feed');
             const canvas = document.getElementById('mirror-canvas');
             const ctx = canvas.getContext('2d');
+            
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 const w = canvas.width;
                 const h = canvas.height;
+                
+                // 1. Draw frame
                 ctx.drawImage(video, 0, 0, w, h);
+                
+                // 2. GET RAW PIXEL DATA
                 let frame = ctx.getImageData(0, 0, w, h);
                 let data = frame.data; 
+                
+                // --- STATIC AND CRUNCH INJECTION ---
+                let baseThreshold = 90; // The base cutoff point
+                let noiseIntensity = 25; // How much random jitter to add (25 is good grain)
+
                 for (let i = 0; i < data.length; i += 4) {
-                    let r = data[i]; let g = data[i + 1]; let b = data[i + 2];
+                    let r = data[i];
+                    let g = data[i + 1];
+                    let b = data[i + 2];
+
                     let brightness = (r + g + b) / 3;
-                    let threshold = 90; 
-                    if (brightness < threshold) { data[i] = 0; data[i + 1] = 15; data[i + 2] = 0; } 
-                    else { 
-                        let noise = (Math.random() - 0.5) * 60;
-                        data[i] = 40 + noise; data[i + 1] = 255; data[i + 2] = 40 + noise;
+
+                    // Calculate a noisy threshold for this pixel
+                    let dynamicThreshold = baseThreshold + (Math.random() * noiseIntensity) - (noiseIntensity / 2);
+
+                    if (brightness < dynamicThreshold) {
+                        // CRUSH TO BLACK (Shadows)
+                        data[i] = 0; 
+                        data[i + 1] = 15; // Dark green tint
+                        data[i + 2] = 0;  
+                    } else {
+                        // BLOW OUT TO GREEN (Highlights)
+                        let glowNoise = (Math.random() - 0.5) * 60;
+                        data[i] = 40 + glowNoise; 
+                        data[i + 1] = 255; 
+                        data[i + 2] = 40 + glowNoise;
                     }
                 }
+                
+                // 3. Put the mutilated pixels back
                 ctx.putImageData(frame, 0, 0);
+                
+                // Random text flicker
                 if(Math.random() > 0.95) {
                      const labels = ["ANALYZING...", "SIGNAL UNSTABLE", "SUBJECT: UNKNOWN", "DATA CORRUPTION"];
                      document.getElementById('face-status').innerText = labels[Math.floor(Math.random()*labels.length)];
@@ -1171,3 +1198,4 @@
     </script>
 </body>
 </html>
+
