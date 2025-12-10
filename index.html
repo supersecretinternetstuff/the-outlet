@@ -1201,14 +1201,35 @@
         }
 
         function captureSubject() {
-            const canvas = document.getElementById('mirror-canvas');
+            // Get the two visual layers
+            const mirrorCanvas = document.getElementById('mirror-canvas');
+            const noiseCanvas = document.getElementById('noise-canvas');
+
+            // 1. Create a temporary, final-resolution canvas (480x360)
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = 480;
+            finalCanvas.height = 360;
+            const finalCtx = finalCanvas.getContext('2d');
+
+            // 2. Draw the pixel-crunch feed (Upscaled from 128x96 to 480x360)
+            // This captures the pixelation into the data.
+            finalCtx.drawImage(mirrorCanvas, 0, 0, finalCanvas.width, finalCanvas.height);
+            
+            // 3. Draw the current noise/grain layer over the top
+            // The opacity from the CSS (0.15) carries over.
+            finalCtx.drawImage(noiseCanvas, 0, 0); 
+            
+            // 4. Save the composite image
             const link = document.createElement('a');
             link.download = 'EVIDENCE_' + Date.now() + '.png';
-            link.href = canvas.toDataURL();
+            link.href = finalCanvas.toDataURL('image/png');
             link.click();
-            playSound('crunch');
-        }
 
+            playSound('crunch');
+            
+            // Clean up the temporary canvas (optional, but good practice)
+            finalCanvas.remove(); 
+        }
         function closeOcular() {
             if(videoStream) toggleCamera();
             document.getElementById('ocular-window').style.display = 'none';
@@ -1221,5 +1242,6 @@
     </script>
 </body>
 </html>
+
 
 
