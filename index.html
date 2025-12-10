@@ -368,7 +368,24 @@
     </div>
 
     <div id="chat" class="overlay"><button class="close-btn" onclick="closeAll()">[X]</button><div class="txt-doc"><h1>IRC LOG</h1><p>&lt;DarkRender&gt; someone else is in the server.<br>&lt;DarkRender&gt; <span style="color:red">THE_VIEWER</span> has joined.</p></div></div>
-    <div id="broadcast" class="overlay" style="border: 10px solid var(--alert-color);"><button class="close-btn" onclick="closeAll()" style="color:var(--alert-color); border-color:var(--alert-color);">[ ABORT ]</button><div class="txt-doc" style="color: #ffaaaa;"><h1 class="shake-screen">TO WHOM IT MAY CONCERN</h1><p>I am screaming in binary. Can you hear me? 01001000 01000101 01001100 01010000</p></div></div>
+
+<div id="broadcast" class="overlay">
+        <button class="close-btn" onclick="closeAll()">[X]</button>
+        <div class="txt-doc" style="max-width: 600px; border: 1px solid var(--main-color); padding: 0;">
+            <div style="background: var(--main-color); color: black; padding: 10px; font-weight: bold; display: flex; justify-content: space-between;">
+                <span>// GLOBAL_SCREAM.log</span>
+                <span id="scream-count">0 VOICES</span>
+            </div>
+            <div id="scream-log" style="height: 300px; overflow-y: scroll; padding: 10px; background: #000; font-family: 'Courier New', monospace; font-size: 12px; color: var(--main-color);">
+                <div style="opacity: 0.5;">> CONNECTING TO VOID...</div>
+            </div>
+            <div style="display: flex; border-top: 1px solid var(--main-color);">
+                <input type="text" id="scream-input" maxlength="140" placeholder="SCREAM HERE..." style="flex: 1; background: #000; color: white; border: none; padding: 10px; font-family: monospace; outline: none;">
+                <button onclick="postScream()" style="background: var(--alert-color); color: black; border: none; padding: 0 20px; font-weight: bold; cursor: pointer;">SEND</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="virus" class="overlay" style="background:black; display:none;"><div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;"><h1 class="flicker" style="color: #00ff00; font-size: 4rem;">SYSTEM PURGE</h1><div id="virus-console" style="text-align: left; font-family: monospace; color: #00ff00; font-size: 1.2rem;"></div></div></div>
     <div id="memory-dump-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:black; z-index:9999; padding:40px; box-sizing:border-box;"><button onclick="document.getElementById('memory-dump-overlay').style.display='none'" style="position:absolute; top:20px; right:20px; background:transparent; color:white; border:1px solid white; cursor:pointer;">[ CLOSE FILE ]</button><div id="dump-content-overlay" style="color:#ff00ff; font-family:monospace; margin-top:40px; white-space: pre-wrap; font-size: 14px;"></div></div>
 
@@ -863,9 +880,110 @@
             localStorage.setItem('THE_OUTLET_STATE', JSON.stringify(state));
         }
         setInterval(saveState, 2000); 
+
+        // --- SCREAM ENGINE (CHAT + ROT) ---
+        async function initScream() {
+            const log = document.getElementById('scream-log');
+            
+            // 1. Fetch initial screams (Last 50)
+            const { data, error } = await client
+                .from('screams')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            if (data) {
+                log.innerHTML = "";
+                // Reverse so newest is at bottom
+                data.reverse().forEach(msg => appendScream(msg));
+                scrollToBottom();
+                document.getElementById('scream-count').innerText = data.length + " VOICES";
+            }
+
+            // 2. Listen for new screams
+            client.channel('public:screams')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'screams' }, payload => {
+                    appendScream(payload.new);
+                    scrollToBottom();
+                })
+                .subscribe();
+        }
+
+        function appendScream(msg) {
+            const log = document.getElementById('scream-log');
+            const div = document.createElement('div');
+            div.style.marginBottom = "8px";
+            div.style.borderBottom = "1px dashed #333";
+            div.style.paddingBottom = "4px";
+            
+            // Calculate Rot
+            const now = new Date();
+            const created = new Date(msg.created_at);
+            const ageMins = (now - created) / 1000 / 60;
+            
+            // ROT ALGORITHM: 10% decay per 10 minutes
+            const rotFactor = Math.min(1, ageMins * 0.01); 
+            const rottedText = rotText(msg.content, rotFactor);
+
+            // Style based on age
+            const opacity = Math.max(0.2, 1 - (ageMins * 0.05));
+            div.style.opacity = opacity;
+
+            const timeStr = created.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            div.innerHTML = `<span style="color:#666">[${timeStr}]</span> ${rottedText}`;
+            log.appendChild(div);
+        }
+
+        function rotText(text, severity) {
+            if (severity <= 0) return text;
+            return text.split('').map(char => {
+                if (char === ' ') return ' ';
+                // If random chance hits, replace char with glitches
+                return Math.random() < severity ? (Math.random() > 0.5 ? '_' : '█') : char;
+            }).join('');
+        }
+
+        async function postScream() {
+            const input = document.getElementById('scream-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Clear immediately for UX
+            input.value = "";
+            
+            // Send to DB
+            const { error } = await client.from('screams').insert({ content: text });
+            if (error) {
+                console.error(error);
+                alert("THE VOID REJECTED YOUR SCREAM.");
+            } else {
+                playSound('crunch');
+            }
+        }
+
+        function scrollToBottom() {
+            const log = document.getElementById('scream-log');
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Initialize when opening the overlay
+        // (We hook this into your existing openOverlay function)
+        const originalOpenOverlay = openOverlay;
+        openOverlay = function(id) {
+            originalOpenOverlay(id); // Call original
+            if (id === 'broadcast') {
+                initScream(); // Load chat if opening broadcast
+            }
+        }
+        
+        // Allow Enter key to send
+        document.getElementById('scream-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') postScream();
+        });
     </script>
 </body>
 </html>
+
 
 
 
