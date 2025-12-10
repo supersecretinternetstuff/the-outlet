@@ -439,16 +439,28 @@
         }
         function openArchive() { toggleArchiveWindow(); } // Alias
 
-        // --- COUNTDOWN LOGIC ---
+     // --- COUNTDOWN LOGIC (HARDCORE MODE) ---
         function updateCountdown() {
             const now = new Date();
             const nextMidnight = new Date(now);
             nextMidnight.setUTCHours(24,0,0,0);
+            
             const diff = nextMidnight - now;
+            
+            // Calculate time parts
             const h = Math.floor(diff / (1000 * 60 * 60));
             const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const s = Math.floor((diff % (1000 * 60)) / 1000);
-            document.getElementById('truth-countdown').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            const ms = Math.floor(diff % 1000); // The racing numbers
+
+            // Format with leading zeros
+            const hStr = h.toString().padStart(2,'0');
+            const mStr = m.toString().padStart(2,'0');
+            const sStr = s.toString().padStart(2,'0');
+            const msStr = ms.toString().padStart(3,'0');
+
+            // Inject into the hardcore container
+            document.getElementById('truth-countdown').innerText = `${hStr}:${mStr}:${sStr}:${msStr}`;
         }
 
         function applyHiveState(state) {
@@ -779,6 +791,7 @@
     </script>
 </body>
 </html>
+
 
 
 
