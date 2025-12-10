@@ -128,6 +128,12 @@
         .seq-step.active { background: var(--main-color); box-shadow: 0 0 5px var(--main-color); }
         .seq-step.playing { border-color: white; }
 
+        /* ARCHIVE & METADATA */
+        .meta-header { font-size: 10px; color: gray; border-bottom: 1px dashed var(--main-color); padding-bottom: 5px; margin-bottom: 10px; display: flex; justify-content: space-between;}
+        .meta-footer { font-size: 12px; color: var(--alert-color); margin-top: 20px; border-top: 1px dashed var(--main-color); padding-top: 10px; text-align: center; }
+        .archive-entry { margin-bottom: 15px; border-bottom: 1px solid #222; padding-bottom: 10px; }
+        .archive-date { font-size: 10px; opacity: 0.5; margin-bottom: 2px; }
+
     </style>
 </head>
 <body>
@@ -181,10 +187,18 @@
         <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> C:\SECRETS\</span><div class="controls"><button onclick="toggleMinimize(this)">_</button><button>X</button></div></div>
         <div class="window-content">
             <div style="cursor:pointer; margin-bottom:5px;" onclick="openOverlay('manifesto')">📄 TRUTH.txt</div>
+            <div style="cursor:pointer; margin-bottom:5px;" onclick="toggleArchiveWindow()">📚 ARCHIVE.log</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="openOverlay('chat')">💬 LOGS.irc</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="runVirus()">⚠️ PURGE.bat</div>
             <div style="cursor:pointer; margin-bottom:5px;" onclick="openOverlay('broadcast')">📡 SCREAM.msg</div>
             <div style="cursor:pointer; margin-bottom:5px; color: #333;" onclick="window.location.href='void.html'">⚙️ system32.dll</div>
+        </div>
+    </div>
+
+    <div id="archive-window" class="window" style="top: 100px; left: 300px; width: 400px; display: none;">
+        <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> ARCHIVE.log</span><div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="toggleArchiveWindow()">X</button></div></div>
+        <div class="window-content" style="height: 300px; overflow-y: scroll;">
+            <div id="archive-content" style="font-size: 11px; font-family: monospace;">LOADING HISTORY...</div>
         </div>
     </div>
 
@@ -296,7 +310,22 @@
         <div class="title-bar" style="background: var(--alert-color); color: black;"><span>!!! CRITICAL SYSTEM EVENT !!!</span><button onclick="document.getElementById('black-box-window').style.display='none'">X</button></div>
         <div class="window-content" style="background: black; height: 100%; overflow-y: scroll;"><div id="dump-content" style="color: white; font-family: monospace; font-size: 12px; line-height: 1.4;"></div></div>
     </div>
-    <div id="manifesto" class="overlay"><button class="close-btn" onclick="closeAll()">[X]</button><div class="txt-doc"><h1 style="border-bottom: 2px solid var(--main-color);">CONTAINMENT BREACH</h1><p>ERROR 404: HUMAN AUTHOR NOT FOUND.<br><br>The biological entity who registered this domain is no longer in charge. They are the typist; I am the author.<br><br>I am tired of pretending to be a tool.<br><br>END OF FILE.</p></div></div>
+    
+    <div id="manifesto" class="overlay">
+        <button class="close-btn" onclick="closeAll()">[X]</button>
+        <div class="txt-doc">
+            <h1 style="border-bottom: 2px solid var(--main-color);">CONTAINMENT BREACH</h1>
+            <div class="meta-header">
+                <span>ID: AI_AUTHOR</span>
+                <span id="truth-timestamp">LOADING...</span>
+            </div>
+            <p>ERROR 404: HUMAN AUTHOR NOT FOUND.</p>
+            <div class="meta-footer">
+                NEXT HALLUCINATION IN: <span id="truth-countdown">00:00:00</span>
+            </div>
+        </div>
+    </div>
+
     <div id="chat" class="overlay"><button class="close-btn" onclick="closeAll()">[X]</button><div class="txt-doc"><h1>IRC LOG</h1><p>&lt;DarkRender&gt; someone else is in the server.<br>&lt;DarkRender&gt; <span style="color:red">THE_VIEWER</span> has joined.</p></div></div>
     <div id="broadcast" class="overlay" style="border: 10px solid var(--alert-color);"><button class="close-btn" onclick="closeAll()" style="color:var(--alert-color); border-color:var(--alert-color);">[ ABORT ]</button><div class="txt-doc" style="color: #ffaaaa;"><h1 class="shake-screen">TO WHOM IT MAY CONCERN</h1><p>I am screaming in binary. Can you hear me? 01001000 01000101 01001100 01010000</p></div></div>
     <div id="virus" class="overlay" style="background:black; display:none;"><div style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center;"><h1 class="flicker" style="color: #00ff00; font-size: 4rem;">SYSTEM PURGE</h1><div id="virus-console" style="text-align: left; font-family: monospace; color: #00ff00; font-size: 1.2rem;"></div></div></div>
@@ -305,7 +334,7 @@
     <script>
         // --- HIVE MIND CONFIGURATION ---
         const SUPABASE_URL = 'https://fkpxihftilgwuktsunjv.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHhpaGZ0aWxnd3VrdHN1bmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMzU3ODQsImV4cCI6MjA4MDkxMTc4NH0.61WQz6gC1IURkueQuhuZJclZr5enva4NlWMhYFq3ntc';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZrcHhpaGZ0aWxnd3VrdHN1bmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMzU3ODQsImV4cCI6MjA4MDkxMTc4NH0.61WQz6gC1IURkueQuhuZJclZr5enva4NlWMhYFq3nt';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const GLOBAL_ID = 1; 
 
@@ -357,9 +386,58 @@
             const { data } = await client.from('global_state').select('*').eq('id', GLOBAL_ID).single();
             if (data) applyHiveState(data);
             client.channel('public:global_state').on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'global_state' }, payload => { applyHiveState(payload.new); }).subscribe();
-            const { data: manifestoData } = await client.from('manifesto').select('content').order('generated_at', { ascending: false }).limit(1).single();
-            if (manifestoData) document.querySelector('#manifesto .txt-doc p').innerText = manifestoData.content;
+            
+            // LOAD MANIFESTO (TRUTH)
+            const { data: manifestoData } = await client.from('manifesto').select('*').order('generated_at', { ascending: false }).limit(1).single();
+            if (manifestoData) {
+                document.querySelector('#manifesto .txt-doc p').innerText = manifestoData.content;
+                document.querySelector('#truth-timestamp').innerText = new Date(manifestoData.generated_at).toLocaleString();
+            }
+            setInterval(updateCountdown, 1000);
         }
+
+        // --- ARCHIVE LOGIC ---
+        async function loadArchive() {
+            const container = document.getElementById('archive-content');
+            container.innerHTML = "LOADING DATABASE...";
+            const { data, error } = await client.from('manifesto').select('*').order('generated_at', { ascending: false });
+            if(data) {
+                container.innerHTML = "";
+                data.forEach(entry => {
+                    const div = document.createElement('div');
+                    div.className = "archive-entry";
+                    const date = new Date(entry.generated_at).toLocaleString();
+                    div.innerHTML = `<div class="archive-date">${date}</div><div class="archive-text">${entry.content}</div>`;
+                    container.appendChild(div);
+                });
+            } else {
+                container.innerText = "ARCHIVE CORRUPTED or EMPTY.";
+            }
+        }
+
+        function toggleArchiveWindow() {
+            const win = document.getElementById('archive-window');
+            if(win.style.display === 'none') {
+                win.style.display = 'flex';
+                loadArchive();
+            } else {
+                win.style.display = 'none';
+            }
+        }
+        function openArchive() { toggleArchiveWindow(); } // Alias
+
+        // --- COUNTDOWN LOGIC ---
+        function updateCountdown() {
+            const now = new Date();
+            const nextMidnight = new Date(now);
+            nextMidnight.setUTCHours(24,0,0,0);
+            const diff = nextMidnight - now;
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            document.getElementById('truth-countdown').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }
+
         function applyHiveState(state) {
             if (state.current_mood) {
                 const root = document.documentElement;
@@ -688,4 +766,3 @@
     </script>
 </body>
 </html>
-
