@@ -263,27 +263,49 @@
             
             /* 10. INTERCEPT SLIDER */
             #freq-slider { width: 100% !important; margin-top: 10px; }
-            /* === SEQUENCER MOBILE PATCH === */
-            #sequencer-grid .seq-row {
-                display: flex !important;
-                flex-direction: row !important; /* Force horizontal layout */
-                align-items: center;
-                width: 100%;
-                margin-bottom: 2px;
-            }
+
             
-            #sequencer-grid .seq-label {
-                width: 50px !important; /* Shrink label width */
-                font-size: 8px !important; /* Shrink text */
-                overflow: hidden;
-            }
-            
-            #sequencer-grid .seq-step {
-                flex: 1; /* Grow to fill space */
-                height: 15px !important;
-                min-width: 10px; /* Prevent shrinking to zero */
-                border: 1px solid #333;
-            }
+          /* === SEQUENCER HARDENING (GLOBAL) === */
+        #sequencer-grid {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .seq-row { 
+            display: flex !important;      /* FORCE Flexbox */
+            flex-direction: row !important; /* FORCE Horizontal */
+            flex-wrap: nowrap !important;   /* NEVER wrap to next line */
+            align-items: center; 
+            gap: 2px; 
+            width: 100%;
+            margin-bottom: 2px;
+        }
+
+        .seq-label { 
+            width: 60px; 
+            min-width: 60px; /* Prevent shrinking */
+            font-size: 9px; 
+            text-align: right; 
+            padding-right: 5px; 
+            opacity: 0.7; 
+            flex-shrink: 0;  /* Do not let the label get crushed */
+        }
+
+        .seq-step { 
+            flex: 1;         /* Grow to fill available space */
+            height: 15px; 
+            background: #111; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            transition: background 0.1s;
+            min-width: 10px; /* Ensure buttons never vanish */
+        }
+
+        .seq-step.active { 
+            background: var(--main-color) !important; 
+            box-shadow: 0 0 5px var(--main-color);
+        }
             
             /* Adjust the BPM slider to fit better */
             #bpm-slider { width: 80px !important; }
@@ -1226,6 +1248,7 @@ const tracks = [
     </script>
 </body>
 </html>
+
 
 
 
