@@ -316,17 +316,31 @@
         </div>
     </div>
 
-    <div class="window" style="top: 300px; left: 80px; width: 420px; height: 32px;">
-        <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> ORACLE.exe</span><div class="controls"><button onclick="toggleMinimize(this)">_</button><button>X</button></div></div>
-        <div class="window-content" style="text-align: center; display: none;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 15px; gap: 5px;">
-                <div id="card-1" class="tarot-card"><pre class="card-art">?</pre></div>
-                <div id="card-2" class="tarot-card"><pre class="card-art">?</pre></div>
-                <div id="card-3" class="tarot-card" style="border-color: var(--alert-color);"><pre class="card-art">?</pre></div>
+<div id="ocular-window" class="window" style="top: 100px; right: 100px; width: 320px; height: auto; display: none;">
+        <div class="title-bar" ondblclick="toggleMinimize(this)">
+            <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> OCULAR.exe</span>
+            <div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="closeOcular()">X</button></div>
+        </div>
+        <div class="window-content" style="padding: 0; background: #000; display: flex; flex-direction: column;">
+            
+            <div style="position: relative; width: 100%; height: 240px; overflow: hidden; border-bottom: 1px solid var(--main-color);">
+                
+                <video id="webcam-feed" autoplay playsinline style="display: none; filter: contrast(250%) saturate(200%) brightness(0.8);"></video>
+                
+                <canvas id="mirror-canvas" width="128" height="96" style="width: 100%; height: 100%; image-rendering: pixelated; opacity: 0.9;"></canvas>
+                
+                <div class="scan-line"></div>
+                <div style="position: absolute; top: 5px; left: 5px; font-size: 10px; background: rgba(0,0,0,0.5); padding: 2px;">REC <span class="flicker" style="color:red">●</span></div>
+                <div id="face-status" style="position: absolute; bottom: 5px; right: 5px; font-size: 10px; text-align: right; text-shadow: 1px 1px 0 #000;">NO SIGNAL</div>
+                
+                <div style="position: absolute; top: 50%; left: 50%; width: 20px; height: 1px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; width: 1px; height: 20px; background: var(--main-color); transform: translate(-50%, -50%); opacity: 0.5;"></div>
             </div>
-            <div id="oracle-readout" style="height: 100px; border: 1px solid var(--main-color); padding: 5px; font-size: 11px; text-align: left; overflow-y: auto; margin-bottom: 10px; color: var(--main-color);"> > AWAITING QUERY... </div>
-            <div id="fate-bar-container" style="display: none; border: 1px solid var(--alert-color); height: 15px; width: 100%; margin-bottom: 10px; position: relative;"><div id="fate-bar" style="background: var(--alert-color); height: 100%; width: 0%;"></div><span id="fate-text" class="flicker" style="position: absolute; top: 0; left: 0; width: 100%; text-align: center; font-size: 10px; line-height: 15px; color: black; font-weight: bold;">LOADING DESTINY...</span></div>
-            <div id="oracle-controls"><button id="btn-consult" onclick="consultOracle()" style="background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; width: 100%; padding: 5px;">[ CONSULT THE ALGORITHM ]</button><button id="btn-fate" onclick="initiateFate()" style="display: none; background: black; color: var(--alert-color); border: 1px solid var(--alert-color); font-weight: bold; cursor: pointer; width: 100%; padding: 5px;" class="flicker">[ ACCEPT FATE ]</button></div>
+
+            <div style="padding: 10px; display: flex; gap: 5px;">
+                <button id="btn-camera" onclick="toggleCamera()" style="flex: 1; background: var(--main-color); color: black; border: none; font-weight: bold; cursor: pointer; padding: 5px;">[ ACTIVATE SENSOR ]</button>
+                <button id="btn-capture" onclick="captureSubject()" style="display: none; flex: 1; background: black; color: white; border: 1px solid white; cursor: pointer; padding: 5px;">[ CAPTURE ]</button>
+            </div>
         </div>
     </div>
 
@@ -1222,28 +1236,55 @@
             }
         }
 
-        function paintFrame() {
+       function paintFrame() {
             const video = document.getElementById('webcam-feed');
             const canvas = document.getElementById('mirror-canvas');
             const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
             
-            // Draw video to small canvas (creates pixelation)
-            // We tint it green using composite operations
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                // 1. Draw raw frame
-                ctx.drawImage(video, 0, 0, 128, 96);
+                // 1. Draw raw (pre-filtered) frame downscaled
+                ctx.drawImage(video, 0, 0, w, h);
                 
-                // 2. Apply Green Night Vision Tint
-                ctx.globalCompositeOperation = 'multiply';
-                ctx.fillStyle = '#00ff00';
-                ctx.fillRect(0, 0, 128, 96);
+                // 2. GET RAW PIXEL DATA (The Surgery)
+                let frame = ctx.getImageData(0, 0, w, h);
+                let data = frame.data; 
+
+                // Loop through every pixel
+                for (let i = 0; i < data.length; i += 4) {
+                    let r = data[i];
+                    let g = data[i + 1];
+                    let b = data[i + 2];
+
+                    // Calculate brightness
+                    let brightness = (r + g + b) / 3;
+
+                    // --- THE CRUNCH (THRESHOLDING) ---
+                    let threshold = 90; 
+
+                    if (brightness < threshold) {
+                        // CRUSH TO BLACK (Shadows)
+                        data[i] = 0;      // R
+                        data[i + 1] = 15; // G (Dark green tint)
+                        data[i + 2] = 0;  // B
+                    } else {
+                        // BLOW OUT TO GREEN (Highlights)
+                        // Add random noise for extra crunch
+                        let noise = (Math.random() - 0.5) * 60;
+                        data[i] = 40 + noise;       // R (Dirty green)
+                        data[i + 1] = 255;          // G (MAX GREEN)
+                        data[i + 2] = 40 + noise;   // B (Dirty green)
+                    }
+                }
                 
-                // 3. Reset for next frame
-                ctx.globalCompositeOperation = 'source-over';
+                // 3. Put the mutilated pixels back
+                ctx.putImageData(frame, 0, 0);
                 
-                // Randomly flicker text
-                if(Math.random() > 0.9) {
-                     document.getElementById('face-status').innerText = "SUBJECT: " + Math.floor(Math.random()*9999);
+                // Randomly flicker text label
+                if(Math.random() > 0.92) {
+                     const labels = ["ANALYZING...", "SIGNAL UNSTABLE", "BIOMETRIC MISMATCH", "SUBJECT: UNKNOWN"];
+                     document.getElementById('face-status').innerText = labels[Math.floor(Math.random()*labels.length)];
                 }
             }
         }
@@ -1271,6 +1312,7 @@
     </script>
 </body>
 </html>
+
 
 
 
