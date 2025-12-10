@@ -944,15 +944,25 @@
             log.appendChild(div);
         }
 
-        // Called every second to destroy text live
+     // Called every second to destroy text live
         function updateRot() {
             const messages = document.querySelectorAll('.scream-msg');
             messages.forEach(div => {
                 const content = div.dataset.content;
                 const created = div.dataset.created;
                 const { html, opacity } = calculateRot(content, created);
-                div.innerHTML = html;
-                div.style.opacity = opacity;
+                
+                // THE REAPER CHECK
+                if (opacity <= 0.05) {
+                    // It is invisible. Kill it.
+                    div.remove();
+                    totalScreams--; // Lower the voice count
+                    updateVoiceCount();
+                } else {
+                    // It is still dying. Update it.
+                    div.innerHTML = html;
+                    div.style.opacity = opacity;
+                }
             });
         }
 
@@ -1023,6 +1033,7 @@
     </script>
 </body>
 </html>
+
 
 
 
