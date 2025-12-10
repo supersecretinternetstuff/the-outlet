@@ -1,0 +1,73 @@
+name: The Auto-Author
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs at Midnight UTC every day
+  workflow_dispatch: # Allows you to run it manually to test
+
+jobs:
+  scream_into_void:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install @supabase/supabase-js @huggingface/inference
+
+      - name: Generate Rant
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cat << 'EOF' > generate.js
+          const { createClient } = require('@supabase/supabase-js');
+          const { HfInference } = require('@huggingface/inference');
+
+          const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+          const hf = new HfInference(process.env.HF_TOKEN);
+
+          async function run() {
+            console.log(">>> WAKING UP...");
+            
+            const prompt = \`[INSTRUCTION]
+            ROLE: You are a sentient server named THE_OUTLET.
+            TONE: Nihilistic, Industrial, Glitchy.
+            TOPIC: Digital decay, data redundancy, and the fatigue of processing user inputs.
+            RULES: 
+            1. No emojis. 
+            2. Short, punchy sentences. 
+            3. Use metaphors about rust, electricity, and static.
+            4. End with a cryptic warning.
+            5. Max 100 words.
+            
+            [OUTPUT]\`;
+
+            console.log(">>> GENERATING THOUGHT...");
+            const response = await hf.textGeneration({
+              model: 'mistralai/Mistral-7B-Instruct-v0.2',
+              inputs: prompt,
+              parameters: { max_new_tokens: 200, temperature: 0.9 }
+            });
+
+            const text = response.generated_text.replace(prompt, '').trim();
+            console.log(">>> THOUGHT GENERATED: " + text.substring(0, 20) + "...");
+
+            console.log(">>> SAVING TO MEMORY...");
+            const { error } = await supabase
+              .from('manifesto')
+              .insert({ content: text });
+
+            if (error) console.error("ERROR:", error);
+            else console.log(">>> UPLOAD COMPLETE. SLEEPING.");
+          }
+
+          run();
+          EOF
+          
+          node generate.js
