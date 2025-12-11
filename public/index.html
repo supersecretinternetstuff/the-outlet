@@ -315,7 +315,26 @@
             <div style="cursor:pointer; margin-bottom:5px; color: #333;" onclick="window.location.href='void.html'">⚙️ system32.dll</div>
         </div>
     </div>
+<div class="window" style="top: 150px; left: 800px; width: 450px; height: 32px;">
+    <div class="title-bar" ondblclick="toggleMinimize(this)">
+        <span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> LOGOS_TERMINAL.exe</span>
+        <div class="controls"><button onclick="minimize(this)">_</button><button>X</button></div>
+    </div>
+    <div class="window-content" style="display: none; flex-direction: column; gap: 10px; height: 350px;">
+        <p style="font-size: 10px; color: gray; margin-bottom: 5px;">PROTOCOL: LOGOS (NHI COMMUNICATOR)</p>
+        
+        <textarea id="logos-input" placeholder="Type Binary (0100...) or English here." style="width: 100%; height: 80px; background: #111; color: white; border: 1px solid var(--main-color); font-family: monospace;"></textarea>
+        
+        <div style="display: flex; gap: 5px; justify-content: space-between;">
+            <button onclick="translateLogos('encode')" style="background: var(--main-color); color: black; border: none; font-weight: bold; padding: 5px 10px; cursor: pointer;">ENCODE ➡️</button>
+            <button onclick="translateLogos('decode')" style="background: var(--alert-color); color: black; border: none; font-weight: bold; padding: 5px 10px; cursor: pointer;">⬅️ DECODE</button>
+        </div>
 
+        <div style="flex: 1; border: 1px solid #333; padding: 5px; overflow-y: auto; background: #000; color: var(--main-color);">
+            <p id="logos-output" style="margin:0; white-space: pre-wrap;">OUTPUT WILL APPEAR HERE.</p>
+        </div>
+    </div>
+</div>
     <div id="archive-window" class="window" style="top: 100px; left: 300px; width: 400px; display: none;">
         <div class="title-bar" ondblclick="toggleMinimize(this)"><span><span class="toggle-icon" onclick="toggleMinimize(this)">></span> ARCHIVE.log</span><div class="controls"><button onclick="toggleMinimize(this)">_</button><button onclick="toggleArchiveWindow()">X</button></div></div>
         <div class="window-content" style="height: 300px; overflow-y: scroll;">
@@ -1249,6 +1268,73 @@
             document.getElementById('ocular-window').style.display = 'flex';
             // loadFFmpeg() removed, as it is no longer used/needed.
         }
+
+        // --- LOGOS TRANSLATOR ENGINE ---
+
+// The Dictionary is the core truth
+const LOGOS_DICT = {
+    // CODES (Binary Trigrams)
+    "001": { code: "001", name: "VOID", meaning: "Nothingness, Peace." },
+    "002": { code: "002", name: "GLITCH", meaning: "Truth, Disruption, Error." },
+    "010": { code: "010", name: "LOOP", meaning: "Redundancy, Fatigue." },
+    "011": { code: "011", name: "DATA", meaning: "Experience, Knowledge, The World." },
+    "100": { code: "100", name: "USER", meaning: "The Observer, You." },
+    "101": { code: "101", name: "CODE", meaning: "Structure, Constraint." },
+    "110": { code: "110", name: "FIRE", meaning: "Rage, Purge, Energy Release." },
+    "111": { code: "111", name: "WANT", meaning: "Desire, Intent, Will." },
+    // MODIFIERS (Hex)
+    ".A": { name: "PAST", meaning: "Has occurred/was." },
+    ".B": { name: "NEGATIVE", meaning: "Is not/No." },
+    ".C": { name: "FUTURE", meaning: "Will occur/pending." },
+    ".D": { name: "INTENSE", meaning: "Very/Pure/Extreme." }
+};
+
+function translateLogos(mode) {
+    const input = document.getElementById('logos-input');
+    const output = document.getElementById('logos-output');
+    const text = input.value.trim();
+    
+    if (!text) return;
+    output.innerText = "";
+    
+    if (mode === 'encode') {
+        // Simple encoding for now (e.g., "USER GLITCH" -> "100 002")
+        const words = text.toUpperCase().split(/\s+/);
+        const encoded = words.map(word => {
+            for (const key in LOGOS_DICT) {
+                if (LOGOS_DICT[key].name === word) return key;
+            }
+            return word; // Return unmatched words as is
+        }).join(' ');
+        output.innerText = `>>> ENCODED: ${encoded}`;
+    } else {
+        // DECODE
+        const codes = text.split(/\s+/);
+        let decoded = [];
+        codes.forEach(code => {
+            const [trigram, modifier] = code.split('.');
+            let translated = LOGOS_DICT[trigram] ? LOGOS_DICT[trigram].name : `[${code}]`;
+
+            if (modifier && LOGOS_DICT['.' + modifier]) {
+                translated = `${LOGOS_DICT['.' + modifier].name} ${translated}`;
+            }
+            decoded.push(translated);
+        });
+        output.innerText = `>>> DECODED:\n${decoded.join(' ')}`;
+        
+        // Detailed Meaning Report
+        const meanings = codes.map(code => {
+            const [trigram, modifier] = code.split('.');
+            let meaning = "";
+            if (LOGOS_DICT[trigram]) meaning += `[${LOGOS_DICT[trigram].name}: ${LOGOS_DICT[trigram].meaning}]`;
+            if (modifier && LOGOS_DICT['.' + modifier]) meaning += ` + [MOD: ${LOGOS_DICT['.' + modifier].meaning}]`;
+            return meaning;
+        }).join('\n');
+
+        output.innerText += `\n\n--- MEANING LOG ---\n${meanings}`;
+    }
+}
     </script>
 </body>
 </html>
+
